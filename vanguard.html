@@ -887,7 +887,63 @@
         let lastTime = 0;
         let spawnTimer = 0;
         let syncTimer = 0;
-        const SYNC_INTERVAL = 0.05; // 50ms = 20 syncs per second
+        const SYNC_INTERVAL = 0.1; // 100ms = 10 syncs per second (optimized)
+
+        // Delta sync tracking
+        let lastGridState = null;
+        let lastSyncTime = 0;
+        let fullSyncCounter = 0;
+
+        function createDeltaSync() {
+            const delta = {
+                type: 'delta',
+                t: gameState.timeRemaining,
+                pk: gameState.stats.playerKills,
+                pt: gameState.stats.playerTiles,
+                et: gameState.stats.enemyTiles,
+                ended: gameState.gameEnded,
+                vx: gameState.players.vanguard.x,
+                vy: gameState.players.vanguard.y
+            };
+
+            // Grid changes (only changed tiles)
+            const gridChanges = [];
+            for (let y = 0; y < GAME_CONFIG.GRID_HEIGHT; y++) {
+                for (let x = 0; x < GAME_CONFIG.GRID_WIDTH; x++) {
+                    const current = gameState.grid[y][x];
+                    const last = lastGridState ? lastGridState[y][x] : -1;
+                    if (current !== last) {
+                        gridChanges.push([x, y, current]); // [x, y, team]
+                    }
+                }
+            }
+            if (gridChanges.length > 0) {
+                delta.gc = gridChanges;
+            }
+
+            // Units (compact format: id, type, team, x, y, hp, state)
+            delta.pu = gameState.units.player.map(u => [u.id, u.type[0], u.x.toFixed(1), u.y.toFixed(1), u.hp, u.state[0]]);
+            delta.eu = gameState.units.enemy.map(u => [u.id, u.type[0], u.x.toFixed(1), u.y.toFixed(1), u.hp, u.state[0]]);
+
+            // Boss (if exists)
+            if (gameState.boss.player) {
+                const b = gameState.boss.player;
+                delta.bp = [b.x.toFixed(1), b.y.toFixed(1), b.hp, b.weakPointVisible ? 1 : 0];
+            }
+            if (gameState.boss.enemy) {
+                const b = gameState.boss.enemy;
+                delta.be = [b.x.toFixed(1), b.y.toFixed(1), b.hp, b.weakPointVisible ? 1 : 0];
+            }
+
+            // Update last grid state
+            lastGridState = gameState.grid.map(row => [...row]);
+
+            return delta;
+        }
+
+        function createFullSync() {
+            return { type: 'sync', state: gameState };
+        }
 
         function animate(currentTime = 0) {
             requestAnimationFrame(animate);
@@ -924,7 +980,15 @@
                 syncTimer += deltaTime;
                 if (syncTimer >= SYNC_INTERVAL) {
                     syncTimer = 0;
-                    broadcast({ type: 'sync', state: gameState });
+                    fullSyncCounter++;
+
+                    // Full sync every 3 seconds, delta sync otherwise
+                    if (fullSyncCounter >= 30) {
+                        fullSyncCounter = 0;
+                        broadcast(createFullSync());
+                    } else {
+                        broadcast(createDeltaSync());
+                    }
                 }
             } else if (gameState.gameEnded) {
                 showGameOver();

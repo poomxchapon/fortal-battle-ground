@@ -512,15 +512,18 @@
 
             conn.on('data', (data) => {
                 if (data.type === 'gameStart') {
-                    // Host started the game
                     gameState.gameStarted = true;
                     document.getElementById('waitingRoom').classList.add('hidden');
                 }
+                else if (data.type === 'delta') {
+                    // Optimized delta sync
+                    applyDeltaSync(data);
+                    isConnectedToHost = true;
+                }
                 else if (data.type === 'sync') {
-                    // Keep our skills state (local cooldowns)
+                    // Full sync (backup)
                     const mySkills = gameState.players.commander.skills;
 
-                    // Deep copy important arrays
                     gameState.grid = JSON.parse(JSON.stringify(data.state.grid));
                     gameState.units = JSON.parse(JSON.stringify(data.state.units));
                     gameState.boss = JSON.parse(JSON.stringify(data.state.boss));
@@ -529,18 +532,73 @@
                     gameState.gameEnded = data.state.gameEnded;
                     gameState.players = data.state.players;
 
-                    // Check if game started from sync
                     if (data.state.gameStarted && !gameState.gameStarted) {
                         gameState.gameStarted = true;
                         document.getElementById('waitingRoom').classList.add('hidden');
                     }
 
-                    // Restore local skills
                     gameState.players.commander.skills = mySkills;
                     gameState.players.commander.connected = true;
                     isConnectedToHost = true;
                 }
             });
+        }
+
+        // Apply delta sync (optimized)
+        function applyDeltaSync(d) {
+            gameState.timeRemaining = d.t;
+            gameState.stats.playerKills = d.pk;
+            gameState.stats.playerTiles = d.pt;
+            gameState.stats.enemyTiles = d.et;
+            gameState.gameEnded = d.ended;
+            gameState.players.vanguard.x = d.vx;
+            gameState.players.vanguard.y = d.vy;
+
+            // Apply grid changes
+            if (d.gc) {
+                d.gc.forEach(([x, y, team]) => {
+                    gameState.grid[y][x] = team;
+                });
+            }
+
+            // Rebuild units from compact format
+            const typeMap = { s: 'soldier', h: 'hero', t: 'turret', b: 'boss' };
+            const stateMap = { m: 'moving', f: 'fighting', d: 'dead' };
+
+            gameState.units.player = d.pu.map(([id, t, x, y, hp, s]) => ({
+                id, type: typeMap[t], team: GAME_CONFIG.TEAM_PLAYER,
+                x: parseFloat(x), y: parseFloat(y), hp, state: stateMap[s],
+                size: GAME_CONFIG.UNITS[typeMap[t]].size
+            }));
+
+            gameState.units.enemy = d.eu.map(([id, t, x, y, hp, s]) => ({
+                id, type: typeMap[t], team: GAME_CONFIG.TEAM_ENEMY,
+                x: parseFloat(x), y: parseFloat(y), hp, state: stateMap[s],
+                size: GAME_CONFIG.UNITS[typeMap[t]].size
+            }));
+
+            // Boss
+            if (d.bp) {
+                gameState.boss.player = {
+                    id: 'boss-player', type: 'boss', team: GAME_CONFIG.TEAM_PLAYER,
+                    x: parseFloat(d.bp[0]), y: parseFloat(d.bp[1]), hp: d.bp[2],
+                    weakPointVisible: d.bp[3] === 1, state: 'moving',
+                    size: GAME_CONFIG.UNITS.boss.size
+                };
+            } else {
+                gameState.boss.player = null;
+            }
+
+            if (d.be) {
+                gameState.boss.enemy = {
+                    id: 'boss-enemy', type: 'boss', team: GAME_CONFIG.TEAM_ENEMY,
+                    x: parseFloat(d.be[0]), y: parseFloat(d.be[1]), hp: d.be[2],
+                    weakPointVisible: d.be[3] === 1, state: 'moving',
+                    size: GAME_CONFIG.UNITS.boss.size
+                };
+            } else {
+                gameState.boss.enemy = null;
+            }
         }
 
         function broadcast(data) {
