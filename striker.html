@@ -216,6 +216,36 @@
         }
         #hitMarker.show { opacity: 1; }
 
+        /* Muzzle flash */
+        #muzzleFlash {
+            position: fixed;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60px;
+            height: 60px;
+            background: radial-gradient(circle, #fff 0%, #ff0 30%, #f80 60%, transparent 70%);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 150;
+            opacity: 0;
+        }
+        #muzzleFlash.show { opacity: 1; }
+        #muzzleFlash.railgun {
+            width: 100px;
+            height: 100px;
+            background: radial-gradient(circle, #fff 0%, #0ff 30%, #00f 60%, transparent 70%);
+        }
+
+        /* Screen shake */
+        @keyframes shake {
+            0%, 100% { transform: translate(0, 0); }
+            25% { transform: translate(-3px, 2px); }
+            50% { transform: translate(3px, -2px); }
+            75% { transform: translate(-2px, -3px); }
+        }
+        .shake { animation: shake 0.1s ease-out; }
+
         /* Game Over */
         #gameOver {
             position: fixed;
@@ -283,10 +313,13 @@
     <!-- Hit Marker -->
     <div id="hitMarker">X</div>
 
+    <!-- Muzzle Flash -->
+    <div id="muzzleFlash"></div>
+
     <!-- HUD -->
     <div id="hud">
         <div class="hud-section">
-            <div class="role-badge">Striker <span style="opacity:0.6;font-size:0.7em">v1.5.0</span></div>
+            <div class="role-badge">Striker <span style="opacity:0.6;font-size:0.7em">v1.6.0</span></div>
             <div class="stat-box">
                 <div class="stat-label">Room</div>
                 <div class="stat-value" id="roomDisplay">---</div>
@@ -1207,6 +1240,13 @@
             weapon.lastShot = now;
             weapon.energy -= weapon.energyCost[weapon.mode];
 
+            // Show muzzle flash
+            showMuzzleFlash();
+
+            // Screen shake
+            document.getElementById('gameCanvas').classList.add('shake');
+            setTimeout(() => document.getElementById('gameCanvas').classList.remove('shake'), 100);
+
             // Raycast with recursive to hit children of Groups
             const raycaster = new THREE.Raycaster();
             raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
@@ -1255,6 +1295,12 @@
             const el = document.getElementById('hitMarker');
             el.classList.add('show');
             setTimeout(() => el.classList.remove('show'), 100);
+        }
+
+        function showMuzzleFlash() {
+            const el = document.getElementById('muzzleFlash');
+            el.className = weapon.mode === 'railgun' ? 'railgun show' : 'show';
+            setTimeout(() => el.className = '', weapon.mode === 'railgun' ? 150 : 50);
         }
 
         function addKillFeed(type) {
