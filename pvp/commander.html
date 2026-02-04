@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fortal PvP - Commander</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { overflow: hidden; background: #0a0a1a; font-family: 'Segoe UI', sans-serif; }
+        #gameCanvas { display: block; }
+
+        #hud {
+            position: fixed; top: 0; left: 0; right: 0;
+            padding: 15px 20px;
+            display: flex; justify-content: space-between; align-items: center;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.8), transparent);
+            color: white; z-index: 100;
+        }
+        .hud-section { display: flex; gap: 15px; align-items: center; }
+        .role-badge {
+            padding: 8px 20px; border-radius: 20px; font-weight: bold;
+            text-transform: uppercase; font-size: 1.1em;
+        }
+        .role-badge.blue { background: #3498db; }
+        .role-badge.red { background: #e74c3c; }
+        .stat-box {
+            background: rgba(255,255,255,0.1);
+            padding: 8px 15px; border-radius: 10px; text-align: center;
+        }
+        .stat-label { font-size: 0.7em; color: #888; text-transform: uppercase; }
+        .stat-value { font-size: 1.3em; font-weight: bold; }
+        #timer { font-size: 2em; font-weight: bold; color: #fff; }
+
+        #skillBar {
+            position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+            display: flex; gap: 15px; z-index: 100;
+        }
+        .skill-btn {
+            width: 80px; height: 80px;
+            border: 3px solid #444; border-radius: 15px;
+            background: rgba(0,0,0,0.7);
+            cursor: pointer; position: relative;
+            display: flex; flex-direction: column;
+            justify-content: center; align-items: center;
+            color: white; transition: all 0.2s;
+        }
+        .skill-btn:hover:not(.disabled) { border-color: #f39c12; transform: scale(1.05); }
+        .skill-btn.disabled { opacity: 0.5; cursor: not-allowed; }
+        .skill-btn .icon { font-size: 2em; }
+        .skill-btn .name { font-size: 0.7em; margin-top: 5px; }
+        .skill-btn .cooldown {
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.7); border-radius: 12px;
+            display: flex; justify-content: center; align-items: center;
+            font-size: 1.5em; font-weight: bold;
+        }
+        .skill-btn .cooldown.hidden { display: none; }
+        .skill-btn.active { border-color: #2ecc71; box-shadow: 0 0 20px rgba(46, 204, 113, 0.5); }
+
+        #territoryBar {
+            position: fixed; bottom: 0; left: 0; right: 0;
+            height: 20px; display: flex; z-index: 100;
+        }
+        #blueTerritory { background: #3498db; height: 100%; transition: width 0.3s; }
+        #redTerritory { background: #e74c3c; height: 100%; transition: width 0.3s; }
+
+        #waitingOverlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.9); display: flex;
+            flex-direction: column; justify-content: center; align-items: center;
+            color: white; z-index: 200;
+        }
+        #waitingOverlay.hidden { display: none; }
+        #waitingOverlay h2 { margin-bottom: 20px; }
+        #waitingOverlay p { color: #888; }
+
+        #gameOverlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.9); display: flex;
+            flex-direction: column; justify-content: center; align-items: center;
+            color: white; z-index: 300;
+        }
+        #gameOverlay.hidden { display: none; }
+        #gameOverlay h1 { font-size: 3em; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+    <div id="waitingOverlay">
+        <h2>⚔️ PvP Mode - Commander</h2>
+        <p>Connecting to host...</p>
+        <p id="connectionStatus">Waiting...</p>
+    </div>
+
+    <div id="hud">
+        <div class="hud-section">
+            <div class="role-badge" id="teamBadge">COMMANDER</div>
+            <div class="stat-box">
+                <div class="stat-label">Blue Tiles</div>
+                <div class="stat-value" id="blueTiles">0</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Red Tiles</div>
+                <div class="stat-value" id="redTiles">0</div>
+            </div>
+        </div>
+        <div id="timer">5:00</div>
+        <div class="hud-section">
+            <div class="stat-box">
+                <div class="stat-label">Blue Kills</div>
+                <div class="stat-value" id="blueKills">0</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Red Kills</div>
+                <div class="stat-value" id="redKills">0</div>
+            </div>
+        </div>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+
+    <div id="skillBar">
+        <div class="skill-btn" id="heroBtn" onclick="selectSkill('hero')">
+            <div class="icon">⚔️</div>
+            <div class="name">HERO</div>
+            <div class="cooldown hidden" id="heroCooldown">0</div>
+        </div>
+        <div class="skill-btn" id="turretBtn" onclick="selectSkill('turret')">
+            <div class="icon">🏰</div>
+            <div class="name">TURRET</div>
+            <div class="cooldown hidden" id="turretCooldown">0</div>
+        </div>
+        <div class="skill-btn" id="meteorBtn" onclick="selectSkill('meteor')">
+            <div class="icon">☄️</div>
+            <div class="name">METEOR</div>
+            <div class="cooldown hidden" id="meteorCooldown">0</div>
+        </div>
+    </div>
+
+    <div id="territoryBar">
+        <div id="blueTerritory" style="width: 50%"></div>
+        <div id="redTerritory" style="width: 50%"></div>
+    </div>
+
+    <div id="gameOverlay" class="hidden">
+        <h1 id="winnerText">BLUE WINS!</h1>
+        <button onclick="location.reload()" style="padding: 15px 30px; font-size: 1.2em; border: none; border-radius: 10px; background: #3498db; color: white; cursor: pointer;">Play Again</button>
+    </div>
+
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r152/three.min.js"></script>
+    <script src="gameCore.js"></script>
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const roomId = urlParams.get('room') || 'pvp-default';
+        const myTeam = urlParams.get('team') || 'blue';
+
+        document.getElementById('teamBadge').textContent = `${myTeam.toUpperCase()} COMMANDER`;
+        document.getElementById('teamBadge').className = `role-badge ${myTeam}`;
+
+        let gameState = createGameState();
+        let selectedSkill = null;
+        let isConnected = false;
+
+        // ==================== PEER CONNECTION ====================
+        const peerId = `fortal-pvp-${roomId}-${myTeam}-commander`;
+        const hostId = `fortal-pvp-${roomId}-blue-vanguard`;
+        let peer = null;
+        let hostConn = null;
+
+        function initPeer() {
+            peer = new Peer(peerId, { debug: 0 });
+
+            peer.on('open', () => {
+                document.getElementById('connectionStatus').textContent = 'Connecting to host...';
+                connectToHost();
+            });
+
+            peer.on('error', (err) => {
+                console.error('Peer error:', err);
+                document.getElementById('connectionStatus').textContent = 'Connection error: ' + err.type;
+            });
+        }
+
+        function connectToHost() {
+            hostConn = peer.connect(hostId, { reliable: true });
+
+            hostConn.on('open', () => {
+                isConnected = true;
+                document.getElementById('connectionStatus').textContent = 'Connected! Waiting for game to start...';
+            });
+
+            hostConn.on('data', (data) => {
+                if (data.type === 'sync') {
+                    gameState = data.state;
+                    if (gameState.gameStarted && document.getElementById('waitingOverlay').className !== 'hidden') {
+                        startGame();
+                    }
+                    updateHUD();
+                    updateSkillBar();
+                    if (gameState.gameEnded) showGameOver();
+                } else if (data.type === 'gameStart') {
+                    startGame();
+                }
+            });
+
+            hostConn.on('close', () => {
+                isConnected = false;
+                document.getElementById('connectionStatus').textContent = 'Disconnected from host';
+            });
+        }
+
+        function broadcast(data) {
+            if (hostConn && hostConn.open) {
+                hostConn.send(data);
+            }
+        }
+
+        // ==================== SKILLS ====================
+        function selectSkill(skill) {
+            const skills = gameState.players?.[myTeam]?.commander?.skills;
+            if (!skills || !skills[skill]?.ready) return;
+
+            document.querySelectorAll('.skill-btn').forEach(btn => btn.classList.remove('active'));
+
+            if (selectedSkill === skill) {
+                selectedSkill = null;
+            } else {
+                selectedSkill = skill;
+                document.getElementById(skill + 'Btn').classList.add('active');
+            }
+        }
+
+        function updateSkillBar() {
+            const skills = gameState.players?.[myTeam]?.commander?.skills;
+            if (!skills) return;
+
+            ['hero', 'turret', 'meteor'].forEach(skill => {
+                const btn = document.getElementById(skill + 'Btn');
+                const cooldownEl = document.getElementById(skill + 'Cooldown');
+
+                if (skills[skill].ready) {
+                    btn.classList.remove('disabled');
+                    cooldownEl.classList.add('hidden');
+                } else {
+                    btn.classList.add('disabled');
+                    cooldownEl.classList.remove('hidden');
+                    cooldownEl.textContent = Math.ceil(skills[skill].cooldown);
+                }
+            });
+        }
+
+        // ==================== THREE.JS ====================
+        let scene, camera, renderer;
+        let gridMeshes = [];
+        let unitMeshes = {};
+
+        function initThreeJS() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x0a0a1a);
+
+            renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('gameCanvas'), antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+
+            const aspect = window.innerWidth / window.innerHeight;
+            const viewHeight = GAME_CONFIG.GRID_HEIGHT * GAME_CONFIG.CELL_SIZE / 2 + 5;
+            const viewWidth = viewHeight * aspect;
+
+            camera = new THREE.OrthographicCamera(-viewWidth, viewWidth, viewHeight, -viewHeight, 0.1, 1000);
+            camera.position.set(0, 50, 0);
+            camera.lookAt(0, 0, 0);
+
+            scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+            const dirLight = new THREE.DirectionalLight(0xffffff, 0.4);
+            dirLight.position.set(10, 20, 10);
+            scene.add(dirLight);
+
+            createGrid();
+        }
+
+        function createGrid() {
+            for (let y = 0; y < GAME_CONFIG.GRID_HEIGHT; y++) {
+                gridMeshes[y] = [];
+                for (let x = 0; x < GAME_CONFIG.GRID_WIDTH; x++) {
+                    const geo = new THREE.BoxGeometry(GAME_CONFIG.CELL_SIZE - 0.05, 0.1, GAME_CONFIG.CELL_SIZE - 0.05);
+                    const mat = new THREE.MeshStandardMaterial({ color: GAME_CONFIG.COLOR_NEUTRAL });
+                    const cell = new THREE.Mesh(geo, mat);
+                    cell.position.set(
+                        (x - GAME_CONFIG.GRID_WIDTH / 2 + 0.5) * GAME_CONFIG.CELL_SIZE,
+                        0,
+                        (y - GAME_CONFIG.GRID_HEIGHT / 2 + 0.5) * GAME_CONFIG.CELL_SIZE
+                    );
+                    gridMeshes[y][x] = cell;
+                    scene.add(cell);
+                }
+            }
+        }
+
+        function updateVisuals() {
+            // Update grid
+            for (let y = 0; y < GAME_CONFIG.GRID_HEIGHT; y++) {
+                for (let x = 0; x < GAME_CONFIG.GRID_WIDTH; x++) {
+                    const state = gameState.grid?.[y]?.[x] || 0;
+                    const cell = gridMeshes[y][x];
+                    if (state === GAME_CONFIG.TEAM_BLUE) {
+                        cell.material.color.setHex(GAME_CONFIG.COLOR_BLUE);
+                    } else if (state === GAME_CONFIG.TEAM_RED) {
+                        cell.material.color.setHex(GAME_CONFIG.COLOR_RED);
+                    } else {
+                        cell.material.color.setHex(GAME_CONFIG.COLOR_NEUTRAL);
+                    }
+                }
+            }
+
+            // Update units
+            const allUnits = [...(gameState.units?.blue || []), ...(gameState.units?.red || [])];
+
+            Object.keys(unitMeshes).forEach(id => {
+                if (!allUnits.find(u => u.id === id)) {
+                    scene.remove(unitMeshes[id]);
+                    delete unitMeshes[id];
+                }
+            });
+
+            allUnits.forEach(unit => {
+                if (unit.state === 'dead') return;
+
+                if (!unitMeshes[unit.id]) {
+                    const color = unit.team === GAME_CONFIG.TEAM_BLUE ? 0x3498db : 0xe74c3c;
+                    const size = unit.size * 0.4;
+                    const geo = unit.type === 'turret' ?
+                        new THREE.CylinderGeometry(size, size * 1.2, size * 2, 8) :
+                        new THREE.SphereGeometry(size, 8, 8);
+                    const mat = new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 0.3 });
+                    const mesh = new THREE.Mesh(geo, mat);
+                    unitMeshes[unit.id] = mesh;
+                    scene.add(mesh);
+                }
+
+                const mesh = unitMeshes[unit.id];
+                mesh.position.set(
+                    (unit.x - GAME_CONFIG.GRID_WIDTH / 2 + 0.5) * GAME_CONFIG.CELL_SIZE,
+                    unit.size * 0.3,
+                    (unit.y - GAME_CONFIG.GRID_HEIGHT / 2 + 0.5) * GAME_CONFIG.CELL_SIZE
+                );
+            });
+        }
+
+        function updateHUD() {
+            document.getElementById('blueTiles').textContent = gameState.stats?.blueTiles || 0;
+            document.getElementById('redTiles').textContent = gameState.stats?.redTiles || 0;
+            document.getElementById('blueKills').textContent = gameState.stats?.blueKills || 0;
+            document.getElementById('redKills').textContent = gameState.stats?.redKills || 0;
+
+            const total = (gameState.stats?.blueTiles || 0) + (gameState.stats?.redTiles || 0) || 1;
+            const bluePercent = Math.round((gameState.stats?.blueTiles || 0) / total * 100);
+
+            document.getElementById('blueTerritory').style.width = bluePercent + '%';
+            document.getElementById('redTerritory').style.width = (100 - bluePercent) + '%';
+
+            const mins = Math.floor((gameState.timeRemaining || 300) / 60);
+            const secs = Math.floor((gameState.timeRemaining || 300) % 60);
+            document.getElementById('timer').textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        // ==================== CLICK TO USE SKILL ====================
+        document.getElementById('gameCanvas').addEventListener('click', (e) => {
+            if (!selectedSkill || !gameState.gameStarted) return;
+
+            const rect = e.target.getBoundingClientRect();
+            const mouseX = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+            const mouseY = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+
+            const raycaster = new THREE.Raycaster();
+            raycaster.setFromCamera(new THREE.Vector2(mouseX, mouseY), camera);
+
+            const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+            const intersection = new THREE.Vector3();
+            raycaster.ray.intersectPlane(plane, intersection);
+
+            const gridX = intersection.x / GAME_CONFIG.CELL_SIZE + GAME_CONFIG.GRID_WIDTH / 2;
+            const gridY = intersection.z / GAME_CONFIG.CELL_SIZE + GAME_CONFIG.GRID_HEIGHT / 2;
+
+            if (gridX >= 0 && gridX < GAME_CONFIG.GRID_WIDTH && gridY >= 0 && gridY < GAME_CONFIG.GRID_HEIGHT) {
+                broadcast({
+                    type: 'skill',
+                    skill: selectedSkill,
+                    team: myTeam,
+                    x: gridX,
+                    y: gridY
+                });
+
+                // Deselect skill
+                document.querySelectorAll('.skill-btn').forEach(btn => btn.classList.remove('active'));
+                selectedSkill = null;
+            }
+        });
+
+        // ==================== GAME LOOP ====================
+        function startGame() {
+            document.getElementById('waitingOverlay').classList.add('hidden');
+            initThreeJS();
+            requestAnimationFrame(gameLoop);
+        }
+
+        function gameLoop() {
+            if (gameState.gameEnded) return;
+
+            updateVisuals();
+            renderer.render(scene, camera);
+            requestAnimationFrame(gameLoop);
+        }
+
+        function showGameOver() {
+            const blueWins = (gameState.stats?.blueTiles || 0) > (gameState.stats?.redTiles || 0);
+            document.getElementById('winnerText').textContent = blueWins ? '🔵 BLUE WINS!' : '🔴 RED WINS!';
+            document.getElementById('winnerText').style.color = blueWins ? '#3498db' : '#e74c3c';
+            document.getElementById('gameOverlay').classList.remove('hidden');
+        }
+
+        // ==================== INIT ====================
+        window.addEventListener('resize', () => {
+            if (renderer && camera) {
+                renderer.setSize(window.innerWidth, window.innerHeight);
+                const aspect = window.innerWidth / window.innerHeight;
+                const viewHeight = GAME_CONFIG.GRID_HEIGHT * GAME_CONFIG.CELL_SIZE / 2 + 5;
+                const viewWidth = viewHeight * aspect;
+                camera.left = -viewWidth;
+                camera.right = viewWidth;
+                camera.updateProjectionMatrix();
+            }
+        });
+
+        initPeer();
+    </script>
+</body>
+</html>

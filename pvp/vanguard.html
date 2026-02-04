@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fortal PvP - Vanguard</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { overflow: hidden; background: #0a0a1a; font-family: 'Segoe UI', sans-serif; }
+        #gameCanvas { display: block; }
+
+        #hud {
+            position: fixed; top: 0; left: 0; right: 0;
+            padding: 15px 20px;
+            display: flex; justify-content: space-between; align-items: center;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.8), transparent);
+            color: white; z-index: 100;
+        }
+        .hud-section { display: flex; gap: 15px; align-items: center; }
+        .role-badge {
+            padding: 8px 20px; border-radius: 20px; font-weight: bold;
+            text-transform: uppercase; font-size: 1.1em;
+        }
+        .role-badge.blue { background: #3498db; }
+        .role-badge.red { background: #e74c3c; }
+        .stat-box {
+            background: rgba(255,255,255,0.1);
+            padding: 8px 15px; border-radius: 10px; text-align: center;
+        }
+        .stat-label { font-size: 0.7em; color: #888; text-transform: uppercase; }
+        .stat-value { font-size: 1.3em; font-weight: bold; }
+        #timer { font-size: 2em; font-weight: bold; color: #fff; }
+        #timer.warning { color: #e74c3c; animation: pulse 1s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+        #territoryBar {
+            position: fixed; bottom: 0; left: 0; right: 0;
+            height: 30px; display: flex; z-index: 100;
+        }
+        #blueTerritory {
+            background: linear-gradient(to right, #3498db, #2980b9);
+            height: 100%; transition: width 0.3s;
+            display: flex; align-items: center; justify-content: flex-end;
+            padding-right: 10px; color: white; font-weight: bold;
+        }
+        #redTerritory {
+            background: linear-gradient(to left, #e74c3c, #c0392b);
+            height: 100%; transition: width 0.3s;
+            display: flex; align-items: center; padding-left: 10px;
+            color: white; font-weight: bold;
+        }
+
+        #waitingOverlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.9); display: flex;
+            flex-direction: column; justify-content: center; align-items: center;
+            color: white; z-index: 200;
+        }
+        #waitingOverlay.hidden { display: none; }
+        #waitingOverlay h2 { margin-bottom: 30px; font-size: 2em; }
+        .player-list {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 30px;
+            margin-bottom: 30px;
+        }
+        .team-box { padding: 20px; border-radius: 15px; min-width: 200px; }
+        .team-box.blue { background: rgba(52, 152, 219, 0.2); border: 2px solid #3498db; }
+        .team-box.red { background: rgba(231, 76, 60, 0.2); border: 2px solid #e74c3c; }
+        .team-box h3 { margin-bottom: 15px; }
+        .team-box.blue h3 { color: #3498db; }
+        .team-box.red h3 { color: #e74c3c; }
+        .player-slot { padding: 10px; margin: 5px 0; background: rgba(0,0,0,0.3); border-radius: 8px; display: flex; align-items: center; gap: 10px; }
+        .player-slot .dot { width: 12px; height: 12px; border-radius: 50%; }
+        .player-slot .dot.online { background: #2ecc71; }
+        .player-slot .dot.offline { background: #555; }
+        #startBtn {
+            padding: 15px 50px; font-size: 1.2em; border: none; border-radius: 10px;
+            background: #2ecc71; color: white; cursor: pointer;
+        }
+        #startBtn:disabled { background: #555; cursor: not-allowed; }
+        #roomInfo { margin-top: 20px; color: #888; }
+
+        #gameOverlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.9); display: flex;
+            flex-direction: column; justify-content: center; align-items: center;
+            color: white; z-index: 300;
+        }
+        #gameOverlay.hidden { display: none; }
+        #gameOverlay h1 { font-size: 3em; margin-bottom: 20px; }
+        #gameOverlay .stats { font-size: 1.5em; margin: 20px 0; }
+    </style>
+</head>
+<body>
+    <div id="waitingOverlay">
+        <h2>⚔️ PvP Mode - Waiting for Players</h2>
+        <div class="player-list">
+            <div class="team-box blue">
+                <h3>🔵 BLUE TEAM</h3>
+                <div class="player-slot"><span class="dot" id="blueVanguardDot"></span> Vanguard (HOST)</div>
+                <div class="player-slot"><span class="dot" id="blueStrikerDot"></span> Striker</div>
+                <div class="player-slot"><span class="dot" id="blueCommanderDot"></span> Commander</div>
+            </div>
+            <div class="team-box red">
+                <h3>🔴 RED TEAM</h3>
+                <div class="player-slot"><span class="dot" id="redVanguardDot"></span> Vanguard</div>
+                <div class="player-slot"><span class="dot" id="redStrikerDot"></span> Striker</div>
+                <div class="player-slot"><span class="dot" id="redCommanderDot"></span> Commander</div>
+            </div>
+        </div>
+        <button id="startBtn" disabled>Waiting for players...</button>
+        <div id="roomInfo">Room: <span id="roomDisplay"></span></div>
+    </div>
+
+    <div id="hud">
+        <div class="hud-section">
+            <div class="role-badge" id="teamBadge">VANGUARD</div>
+            <div class="stat-box">
+                <div class="stat-label">Blue Kills</div>
+                <div class="stat-value" id="blueKills">0</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Red Kills</div>
+                <div class="stat-value" id="redKills">0</div>
+            </div>
+        </div>
+        <div id="timer">5:00</div>
+        <div class="hud-section">
+            <div class="stat-box">
+                <div class="stat-label">Blue Tiles</div>
+                <div class="stat-value" id="blueTiles">0</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Red Tiles</div>
+                <div class="stat-value" id="redTiles">0</div>
+            </div>
+        </div>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+
+    <div id="territoryBar">
+        <div id="blueTerritory" style="width: 50%"><span id="bluePercent">50%</span></div>
+        <div id="redTerritory" style="width: 50%"><span id="redPercent">50%</span></div>
+    </div>
+
+    <div id="gameOverlay" class="hidden">
+        <h1 id="winnerText">BLUE WINS!</h1>
+        <div class="stats">
+            <div>Blue: <span id="finalBlue">0</span> tiles</div>
+            <div>Red: <span id="finalRed">0</span> tiles</div>
+        </div>
+        <button onclick="location.reload()" style="padding: 15px 30px; font-size: 1.2em; border: none; border-radius: 10px; background: #3498db; color: white; cursor: pointer;">Play Again</button>
+    </div>
+
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r152/three.min.js"></script>
+    <script src="gameCore.js"></script>
+    <script>
+        // ==================== SETUP ====================
+        const urlParams = new URLSearchParams(window.location.search);
+        const roomId = urlParams.get('room') || 'pvp-default';
+        const myTeam = urlParams.get('team') || 'blue';
+
+        document.getElementById('roomDisplay').textContent = roomId;
+        document.getElementById('teamBadge').textContent = `${myTeam.toUpperCase()} VANGUARD`;
+        document.getElementById('teamBadge').className = `role-badge ${myTeam}`;
+
+        let gameState = createGameState();
+        initGrid(gameState);
+
+        // Mark self as connected
+        gameState.players[myTeam].vanguard.connected = true;
+
+        // ==================== PEER CONNECTION ====================
+        const peerId = `fortal-pvp-${roomId}-${myTeam}-vanguard`;
+        let peer = null;
+        let connections = {};
+
+        function initPeer() {
+            peer = new Peer(peerId, { debug: 0 });
+
+            peer.on('open', (id) => {
+                console.log('My peer ID:', id);
+                updateConnectionUI();
+
+                // If blue vanguard, we are host - listen for connections
+                if (myTeam === 'blue') {
+                    peer.on('connection', handleIncomingConnection);
+                } else {
+                    // Red vanguard connects to blue vanguard (host)
+                    connectToHost();
+                }
+            });
+
+            peer.on('error', (err) => {
+                console.error('Peer error:', err);
+                if (err.type === 'unavailable-id') {
+                    alert('This role is already taken!');
+                }
+            });
+        }
+
+        function handleIncomingConnection(conn) {
+            console.log('Incoming connection from:', conn.peer);
+            connections[conn.peer] = conn;
+
+            conn.on('open', () => {
+                // Parse peer ID to get team and role
+                const parts = conn.peer.split('-');
+                const team = parts[3]; // blue or red
+                const role = parts[4]; // vanguard, striker, commander
+
+                if (team && role && gameState.players[team]) {
+                    gameState.players[team][role].connected = true;
+                    updateConnectionUI();
+                    broadcast({ type: 'playerJoined', team, role });
+                }
+            });
+
+            conn.on('data', handleData);
+            conn.on('close', () => {
+                delete connections[conn.peer];
+                const parts = conn.peer.split('-');
+                const team = parts[3];
+                const role = parts[4];
+                if (team && role && gameState.players[team]) {
+                    gameState.players[team][role].connected = false;
+                    updateConnectionUI();
+                }
+            });
+        }
+
+        function connectToHost() {
+            const hostId = `fortal-pvp-${roomId}-blue-vanguard`;
+            const conn = peer.connect(hostId, { reliable: true });
+
+            conn.on('open', () => {
+                connections[hostId] = conn;
+                console.log('Connected to host');
+            });
+
+            conn.on('data', handleData);
+        }
+
+        function handleData(data) {
+            if (data.type === 'sync') {
+                // Full state sync from host
+                Object.assign(gameState, data.state);
+                updateConnectionUI();
+            } else if (data.type === 'gameStart') {
+                startGame();
+            } else if (data.type === 'move') {
+                // Other vanguard movement
+                if (data.team && gameState.players[data.team]) {
+                    gameState.players[data.team].vanguard.x = data.x;
+                    gameState.players[data.team].vanguard.y = data.y;
+                }
+            } else if (data.type === 'skill') {
+                if (data.skill === 'hero') useSkillHero(gameState, data.team === 'blue' ? GAME_CONFIG.TEAM_BLUE : GAME_CONFIG.TEAM_RED, data.x, data.y);
+                if (data.skill === 'turret') useSkillTurret(gameState, data.team === 'blue' ? GAME_CONFIG.TEAM_BLUE : GAME_CONFIG.TEAM_RED, data.x, data.y);
+                if (data.skill === 'meteor') useSkillMeteor(gameState, data.team === 'blue' ? GAME_CONFIG.TEAM_BLUE : GAME_CONFIG.TEAM_RED, data.x, data.y);
+            } else if (data.type === 'shoot') {
+                // Striker shoot
+                const teamKey = data.team;
+                const enemyKey = data.team === 'blue' ? 'red' : 'blue';
+                const unit = gameState.units[enemyKey].find(u => u.id === data.targetId);
+                if (unit) {
+                    unit.hp -= data.damage;
+                    if (unit.hp <= 0) {
+                        unit.state = 'dead';
+                        gameState.stats[teamKey + 'Kills']++;
+                    }
+                }
+            }
+        }
+
+        function broadcast(data) {
+            Object.values(connections).forEach(conn => {
+                if (conn.open) conn.send(data);
+            });
+        }
+
+        // ==================== UI ====================
+        function updateConnectionUI() {
+            ['blue', 'red'].forEach(team => {
+                ['vanguard', 'striker', 'commander'].forEach(role => {
+                    const dotId = `${team}${role.charAt(0).toUpperCase() + role.slice(1)}Dot`;
+                    const dot = document.getElementById(dotId);
+                    if (dot) {
+                        dot.className = 'dot ' + (gameState.players[team][role].connected ? 'online' : 'offline');
+                    }
+                });
+            });
+
+            // Check if all players connected
+            const allConnected = ['blue', 'red'].every(team =>
+                ['vanguard', 'striker', 'commander'].every(role =>
+                    gameState.players[team][role].connected
+                )
+            );
+
+            const startBtn = document.getElementById('startBtn');
+            if (allConnected) {
+                startBtn.disabled = false;
+                startBtn.textContent = 'Start Game!';
+            } else {
+                startBtn.disabled = true;
+                const count = ['blue', 'red'].reduce((acc, team) =>
+                    acc + ['vanguard', 'striker', 'commander'].filter(role =>
+                        gameState.players[team][role].connected
+                    ).length, 0);
+                startBtn.textContent = `Waiting for players (${count}/6)...`;
+            }
+        }
+
+        document.getElementById('startBtn').addEventListener('click', () => {
+            if (myTeam === 'blue') {
+                gameState.gameStarted = true;
+                broadcast({ type: 'gameStart' });
+                startGame();
+            }
+        });
+
+        // ==================== THREE.JS ====================
+        let scene, camera, renderer;
+        let gridMeshes = [];
+        let unitMeshes = {};
+        let playerMeshes = {};
+
+        function initThreeJS() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x0a0a1a);
+
+            renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('gameCanvas'), antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+
+            const aspect = window.innerWidth / window.innerHeight;
+            const viewHeight = GAME_CONFIG.GRID_HEIGHT * GAME_CONFIG.CELL_SIZE / 2 + 5;
+            const viewWidth = viewHeight * aspect;
+
+            camera = new THREE.OrthographicCamera(-viewWidth, viewWidth, viewHeight, -viewHeight, 0.1, 1000);
+            camera.position.set(0, 50, 0);
+            camera.lookAt(0, 0, 0);
+
+            scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+            const dirLight = new THREE.DirectionalLight(0xffffff, 0.4);
+            dirLight.position.set(10, 20, 10);
+            scene.add(dirLight);
+
+            createGrid();
+            createPlayers();
+        }
+
+        function createGrid() {
+            for (let y = 0; y < GAME_CONFIG.GRID_HEIGHT; y++) {
+                gridMeshes[y] = [];
+                for (let x = 0; x < GAME_CONFIG.GRID_WIDTH; x++) {
+                    const geo = new THREE.BoxGeometry(GAME_CONFIG.CELL_SIZE - 0.05, 0.1, GAME_CONFIG.CELL_SIZE - 0.05);
+                    const mat = new THREE.MeshStandardMaterial({ color: GAME_CONFIG.COLOR_NEUTRAL });
+                    const cell = new THREE.Mesh(geo, mat);
+                    cell.position.set(
+                        (x - GAME_CONFIG.GRID_WIDTH / 2 + 0.5) * GAME_CONFIG.CELL_SIZE,
+                        0,
+                        (y - GAME_CONFIG.GRID_HEIGHT / 2 + 0.5) * GAME_CONFIG.CELL_SIZE
+                    );
+                    gridMeshes[y][x] = cell;
+                    scene.add(cell);
+                }
+            }
+        }
+
+        function createPlayers() {
+            ['blue', 'red'].forEach(team => {
+                const color = team === 'blue' ? 0x3498db : 0xe74c3c;
+                const geo = new THREE.CapsuleGeometry(1, 2, 8, 16);
+                const mat = new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 0.5 });
+                const mesh = new THREE.Mesh(geo, mat);
+                mesh.rotation.x = 0;
+                playerMeshes[team] = mesh;
+                scene.add(mesh);
+            });
+        }
+
+        function updateGrid() {
+            for (let y = 0; y < GAME_CONFIG.GRID_HEIGHT; y++) {
+                for (let x = 0; x < GAME_CONFIG.GRID_WIDTH; x++) {
+                    const state = gameState.grid[y][x];
+                    const cell = gridMeshes[y][x];
+                    if (state === GAME_CONFIG.TEAM_BLUE) {
+                        cell.material.color.setHex(GAME_CONFIG.COLOR_BLUE);
+                    } else if (state === GAME_CONFIG.TEAM_RED) {
+                        cell.material.color.setHex(GAME_CONFIG.COLOR_RED);
+                    } else {
+                        cell.material.color.setHex(GAME_CONFIG.COLOR_NEUTRAL);
+                    }
+                }
+            }
+        }
+
+        function updatePlayers() {
+            ['blue', 'red'].forEach(team => {
+                const vanguard = gameState.players[team].vanguard;
+                const mesh = playerMeshes[team];
+                if (mesh && vanguard.connected) {
+                    mesh.position.set(
+                        (vanguard.x - GAME_CONFIG.GRID_WIDTH / 2 + 0.5) * GAME_CONFIG.CELL_SIZE,
+                        1.5,
+                        (vanguard.y - GAME_CONFIG.GRID_HEIGHT / 2 + 0.5) * GAME_CONFIG.CELL_SIZE
+                    );
+                    mesh.visible = true;
+                } else if (mesh) {
+                    mesh.visible = false;
+                }
+            });
+        }
+
+        function updateUnits() {
+            // Simple unit rendering
+            const allUnits = [...gameState.units.blue, ...gameState.units.red];
+
+            // Remove old meshes
+            Object.keys(unitMeshes).forEach(id => {
+                if (!allUnits.find(u => u.id === id)) {
+                    scene.remove(unitMeshes[id]);
+                    delete unitMeshes[id];
+                }
+            });
+
+            // Create/update units
+            allUnits.forEach(unit => {
+                if (unit.state === 'dead') return;
+
+                if (!unitMeshes[unit.id]) {
+                    const color = unit.team === GAME_CONFIG.TEAM_BLUE ? 0x3498db : 0xe74c3c;
+                    const size = unit.size * 0.5;
+                    const geo = unit.type === 'turret' ?
+                        new THREE.CylinderGeometry(size, size * 1.2, size * 2, 8) :
+                        new THREE.SphereGeometry(size, 8, 8);
+                    const mat = new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 0.3 });
+                    const mesh = new THREE.Mesh(geo, mat);
+                    unitMeshes[unit.id] = mesh;
+                    scene.add(mesh);
+                }
+
+                const mesh = unitMeshes[unit.id];
+                mesh.position.set(
+                    (unit.x - GAME_CONFIG.GRID_WIDTH / 2 + 0.5) * GAME_CONFIG.CELL_SIZE,
+                    unit.size * 0.5,
+                    (unit.y - GAME_CONFIG.GRID_HEIGHT / 2 + 0.5) * GAME_CONFIG.CELL_SIZE
+                );
+            });
+        }
+
+        function updateHUD() {
+            document.getElementById('blueKills').textContent = gameState.stats.blueKills;
+            document.getElementById('redKills').textContent = gameState.stats.redKills;
+            document.getElementById('blueTiles').textContent = gameState.stats.blueTiles;
+            document.getElementById('redTiles').textContent = gameState.stats.redTiles;
+
+            const total = gameState.stats.blueTiles + gameState.stats.redTiles || 1;
+            const bluePercent = Math.round(gameState.stats.blueTiles / total * 100);
+            const redPercent = 100 - bluePercent;
+
+            document.getElementById('blueTerritory').style.width = bluePercent + '%';
+            document.getElementById('redTerritory').style.width = redPercent + '%';
+            document.getElementById('bluePercent').textContent = bluePercent + '%';
+            document.getElementById('redPercent').textContent = redPercent + '%';
+
+            const mins = Math.floor(gameState.timeRemaining / 60);
+            const secs = Math.floor(gameState.timeRemaining % 60);
+            document.getElementById('timer').textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
+            document.getElementById('timer').className = gameState.timeRemaining <= 60 ? 'warning' : '';
+        }
+
+        // ==================== CONTROLS ====================
+        const keys = {};
+        document.addEventListener('keydown', (e) => keys[e.key.toLowerCase()] = true);
+        document.addEventListener('keyup', (e) => keys[e.key.toLowerCase()] = false);
+
+        function handleMovement(deltaTime) {
+            const speed = 15 * deltaTime;
+            const vanguard = gameState.players[myTeam].vanguard;
+
+            if (keys['w'] || keys['arrowup']) vanguard.y -= speed;
+            if (keys['s'] || keys['arrowdown']) vanguard.y += speed;
+            if (keys['a'] || keys['arrowleft']) vanguard.x -= speed;
+            if (keys['d'] || keys['arrowright']) vanguard.x += speed;
+
+            vanguard.x = Math.max(0, Math.min(GAME_CONFIG.GRID_WIDTH - 1, vanguard.x));
+            vanguard.y = Math.max(0, Math.min(GAME_CONFIG.GRID_HEIGHT - 1, vanguard.y));
+
+            // Broadcast movement
+            broadcast({ type: 'move', team: myTeam, x: vanguard.x, y: vanguard.y });
+        }
+
+        // ==================== GAME LOOP ====================
+        let lastTime = 0;
+        let syncTimer = 0;
+
+        function startGame() {
+            document.getElementById('waitingOverlay').classList.add('hidden');
+            gameState.gameStarted = true;
+            initThreeJS();
+            requestAnimationFrame(gameLoop);
+        }
+
+        function gameLoop(currentTime) {
+            const deltaTime = Math.min((currentTime - lastTime) / 1000, 0.1);
+            lastTime = currentTime;
+
+            if (!gameState.gameEnded) {
+                handleMovement(deltaTime);
+                updateGame(gameState, deltaTime);
+
+                // Sync to other players (host only)
+                if (myTeam === 'blue') {
+                    syncTimer += deltaTime;
+                    if (syncTimer >= 0.05) { // 20 Hz sync
+                        syncTimer = 0;
+                        broadcast({ type: 'sync', state: gameState });
+                    }
+                }
+
+                updateGrid();
+                updatePlayers();
+                updateUnits();
+                updateHUD();
+                renderer.render(scene, camera);
+
+                if (gameState.gameEnded) {
+                    showGameOver();
+                }
+
+                requestAnimationFrame(gameLoop);
+            }
+        }
+
+        function showGameOver() {
+            const blueWins = gameState.stats.blueTiles > gameState.stats.redTiles;
+            document.getElementById('winnerText').textContent = blueWins ? '🔵 BLUE WINS!' : '🔴 RED WINS!';
+            document.getElementById('winnerText').style.color = blueWins ? '#3498db' : '#e74c3c';
+            document.getElementById('finalBlue').textContent = gameState.stats.blueTiles;
+            document.getElementById('finalRed').textContent = gameState.stats.redTiles;
+            document.getElementById('gameOverlay').classList.remove('hidden');
+        }
+
+        // ==================== INIT ====================
+        window.addEventListener('resize', () => {
+            if (renderer) {
+                renderer.setSize(window.innerWidth, window.innerHeight);
+                const aspect = window.innerWidth / window.innerHeight;
+                const viewHeight = GAME_CONFIG.GRID_HEIGHT * GAME_CONFIG.CELL_SIZE / 2 + 5;
+                const viewWidth = viewHeight * aspect;
+                camera.left = -viewWidth;
+                camera.right = viewWidth;
+                camera.top = viewHeight;
+                camera.bottom = -viewHeight;
+                camera.updateProjectionMatrix();
+            }
+        });
+
+        initPeer();
+        updateConnectionUI();
+    </script>
+</body>
+</html>
