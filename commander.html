@@ -672,17 +672,29 @@
             }
         }
 
+        // Track last grid state for efficient updates
+        let lastRenderedGrid = null;
+
         function updateGrid() {
+            // Initialize tracking array on first call
+            if (!lastRenderedGrid) {
+                lastRenderedGrid = gameState.grid.map(row => row.map(() => -1));
+            }
+
+            // Only update cells that changed
             for (let y = 0; y < GAME_CONFIG.GRID_HEIGHT; y++) {
                 for (let x = 0; x < GAME_CONFIG.GRID_WIDTH; x++) {
-                    const cell = gridMeshes[y][x];
                     const state = gameState.grid[y][x];
-                    if (state === GAME_CONFIG.TEAM_PLAYER) {
-                        cell.material.color.setHex(GAME_CONFIG.COLOR_PLAYER);
-                    } else if (state === GAME_CONFIG.TEAM_ENEMY) {
-                        cell.material.color.setHex(GAME_CONFIG.COLOR_ENEMY);
-                    } else {
-                        cell.material.color.setHex(GAME_CONFIG.COLOR_NEUTRAL);
+                    if (state !== lastRenderedGrid[y][x]) {
+                        const cell = gridMeshes[y][x];
+                        if (state === GAME_CONFIG.TEAM_PLAYER) {
+                            cell.material.color.setHex(GAME_CONFIG.COLOR_PLAYER);
+                        } else if (state === GAME_CONFIG.TEAM_ENEMY) {
+                            cell.material.color.setHex(GAME_CONFIG.COLOR_ENEMY);
+                        } else {
+                            cell.material.color.setHex(GAME_CONFIG.COLOR_NEUTRAL);
+                        }
+                        lastRenderedGrid[y][x] = state;
                     }
                 }
             }
