@@ -995,7 +995,8 @@
             const deltaTime = Math.min((currentTime - lastTime) / 1000, 0.1);
             lastTime = currentTime;
 
-            if (!gameState.gameEnded) {
+            // Only run game logic after game starts
+            if (gameState.gameStarted && !gameState.gameEnded) {
                 // Only run game logic if NOT connected to host
                 // Host (vanguard) is authoritative
                 if (!isConnectedToHost) {
@@ -1033,7 +1034,7 @@
                 updateGrid();
                 updateUnitsVisual();
                 updateUI();
-            } else {
+            } else if (gameState.gameEnded) {
                 showGameOver();
             }
 
