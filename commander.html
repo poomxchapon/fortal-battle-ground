@@ -633,6 +633,12 @@
                     gameState.players.commander.connected = true;
                     isConnectedToHost = true;
                 }
+                else if (data.type === 'gameEnd') {
+                    // Game ended - show game over immediately
+                    gameState.gameEnded = true;
+                    gameState.stats = data.stats;
+                    showGameOver();
+                }
             });
         }
 

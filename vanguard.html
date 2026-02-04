@@ -1248,11 +1248,19 @@
                     }
                 }
             } else if (gameState.gameEnded) {
+                // Send final sync to all players so they see game over too
+                if (!gameEndBroadcasted) {
+                    gameEndBroadcasted = true;
+                    broadcast(createDeltaSync());
+                    broadcast({ type: 'gameEnd', stats: gameState.stats });
+                }
                 showGameOver();
             }
 
             renderer.render(scene, camera);
         }
+
+        let gameEndBroadcasted = false;
 
         // ==================== RESIZE ====================
         window.addEventListener('resize', () => {

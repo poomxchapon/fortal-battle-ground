@@ -647,6 +647,12 @@
                         onGameStart();
                     }
                 }
+                else if (data.type === 'gameEnd') {
+                    // Game end notification from host
+                    gameState.gameEnded = true;
+                    gameState.stats = data.stats;
+                    showGameOver();
+                }
             });
         }
 
