@@ -33,12 +33,12 @@ const GAME_CONFIG = {
     SKILL_TURRET_CD: 20,
     SKILL_METEOR_CD: 30,
 
-    // Unit stats
+    // Unit stats (size in world units, CELL_SIZE = 1.5)
     UNITS: {
-        soldier: { hp: 100, atk: [8, 11], speed: 2, size: 0.4, color: 0x95a5a6 },
-        hero: { hp: 200, atk: [18, 22], speed: 1.5, size: 0.6, color: 0xf1c40f },
-        turret: { hp: 500, atk: [58, 64], speed: 0, size: 1.2, area: 5, color: 0x1abc9c },
-        boss: { hp: 5000, atk: [98, 103], speed: 0.3, size: 2.5, color: 0x8e44ad }
+        soldier: { hp: 100, atk: [8, 11], speed: 2, size: 1.5, color: 0x95a5a6 },      // 1x1 cell
+        hero: { hp: 200, atk: [18, 22], speed: 1.5, size: 3.0, color: 0xf1c40f },      // 2x2 cells
+        turret: { hp: 500, atk: [58, 64], speed: 0, size: 3.0, area: 5, color: 0x1abc9c }, // 2x2 cells
+        boss: { hp: 5000, atk: [98, 103], speed: 0.3, size: 7.5, color: 0x8e44ad }    // 5x5 cells
     }
 };
 
