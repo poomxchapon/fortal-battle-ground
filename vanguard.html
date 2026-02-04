@@ -820,7 +820,7 @@
         document.addEventListener('keyup', e => keys[e.code] = false);
 
         function handleInput(deltaTime) {
-            const speed = 15 * deltaTime;
+            const speed = 8 * deltaTime; // Reduced from 15
             let moved = false;
 
             if (keys['KeyW'] || keys['ArrowUp']) { gameState.players.vanguard.y -= speed; moved = true; }
