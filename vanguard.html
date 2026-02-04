@@ -634,6 +634,54 @@
             }
         }
 
+        // Create health bar for units
+        function createHealthBar(width, height) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 64;
+            canvas.height = 8;
+            const ctx = canvas.getContext('2d');
+
+            // Background (dark)
+            ctx.fillStyle = '#333333';
+            ctx.fillRect(0, 0, 64, 8);
+
+            // Health (green)
+            ctx.fillStyle = '#2ecc71';
+            ctx.fillRect(1, 1, 62, 6);
+
+            const texture = new THREE.CanvasTexture(canvas);
+            texture.needsUpdate = true;
+
+            const spriteMat = new THREE.SpriteMaterial({ map: texture, transparent: true });
+            const sprite = new THREE.Sprite(spriteMat);
+            sprite.scale.set(width, height, 1);
+            sprite.name = 'healthBar';
+            sprite.userData = { canvas, ctx, texture };
+
+            return sprite;
+        }
+
+        // Update health bar display
+        function updateHealthBar(sprite, currentHp, maxHp) {
+            if (!sprite || !sprite.userData.ctx) return;
+            const { ctx, texture } = sprite.userData;
+            const ratio = Math.max(0, currentHp / maxHp);
+
+            // Clear and redraw
+            ctx.fillStyle = '#333333';
+            ctx.fillRect(0, 0, 64, 8);
+
+            // Health color: green > yellow > red
+            let color = '#2ecc71';
+            if (ratio < 0.3) color = '#e74c3c';
+            else if (ratio < 0.6) color = '#f39c12';
+
+            ctx.fillStyle = color;
+            ctx.fillRect(1, 1, Math.floor(62 * ratio), 6);
+
+            texture.needsUpdate = true;
+        }
+
         // Create fancy mesh for each unit type
         function createUnitMesh(unit) {
             const config = GAME_CONFIG.UNITS[unit.type];
@@ -814,7 +862,14 @@
                 }
             }
 
-            group.userData = { type: unit.type, team: unit.team, createTime: Date.now() };
+            // Add health bar above unit (different heights for different unit types)
+            const healthBarHeights = { soldier: 1.8, hero: 3.5, turret: 2.0, boss: 5.5 };
+            const healthBarWidths = { soldier: 1.2, hero: 2.0, turret: 2.0, boss: 4.0 };
+            const healthBar = createHealthBar(healthBarWidths[unit.type], 0.2);
+            healthBar.position.y = healthBarHeights[unit.type];
+            group.add(healthBar);
+
+            group.userData = { type: unit.type, team: unit.team, createTime: Date.now(), maxHp: config.hp };
             return group;
         }
 
@@ -854,6 +909,12 @@
                     0,
                     (unit.y - GAME_CONFIG.GRID_HEIGHT / 2 + 0.5) * GAME_CONFIG.CELL_SIZE
                 );
+
+                // Update health bar
+                const healthBar = mesh.getObjectByName('healthBar');
+                if (healthBar && mesh.userData.maxHp) {
+                    updateHealthBar(healthBar, unit.hp, mesh.userData.maxHp);
+                }
 
                 // Animations based on unit type
                 const elapsed = (currentTime - mesh.userData.createTime) / 1000;
