@@ -575,7 +575,22 @@ const updateTurret = (turret, state, deltaTime, isEnemy = false) => {
         const proj = createProjectile(turret.x, turret.y, targetX, targetY, team, turret.atk);
         state.projectiles.push(proj);
 
-        // Only deal damage if there's a target
+        // Paint area where projectile lands (every shot paints!)
+        const gx = Math.floor(targetX);
+        const gy = Math.floor(targetY);
+        const paintRadius = 1; // Small paint area per shot
+        for (let dy = -paintRadius; dy <= paintRadius; dy++) {
+            for (let dx = -paintRadius; dx <= paintRadius; dx++) {
+                const px = gx + dx;
+                const py = gy + dy;
+                if (px >= 0 && px < GAME_CONFIG.GRID_WIDTH &&
+                    py >= 0 && py < GAME_CONFIG.GRID_HEIGHT) {
+                    state.grid[py][px] = team;
+                }
+            }
+        }
+
+        // Deal damage if there's a target
         if (nearestTarget) {
             const killed = dealDamage(turret, nearestTarget);
             if (killed) {
@@ -584,9 +599,7 @@ const updateTurret = (turret, state, deltaTime, isEnemy = false) => {
                 } else {
                     state.stats.playerKills++;
                 }
-                // Paint area where enemy died
-                const gx = Math.floor(nearestTarget.x);
-                const gy = Math.floor(nearestTarget.y);
+                // Extra paint area where enemy died
                 for (let dy = -2; dy <= 2; dy++) {
                     for (let dx = -2; dx <= 2; dx++) {
                         const px = gx + dx;
