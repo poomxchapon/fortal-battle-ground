@@ -816,6 +816,18 @@
         }
 
         // ==================== SHOOTING ====================
+        // Helper: find parent Group with unitId
+        function findUnitGroup(object) {
+            let current = object;
+            while (current) {
+                if (current.userData && current.userData.unitId) {
+                    return current;
+                }
+                current = current.parent;
+            }
+            return null;
+        }
+
         function shoot() {
             const now = Date.now();
             if (now - weapon.lastShot < weapon.fireRates[weapon.mode]) return;
@@ -824,7 +836,7 @@
             weapon.lastShot = now;
             weapon.energy -= weapon.energyCost[weapon.mode];
 
-            // Raycast
+            // Raycast with recursive to hit children of Groups
             const raycaster = new THREE.Raycaster();
             raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
 
@@ -834,11 +846,15 @@
                 return unit && unit.team === GAME_CONFIG.TEAM_ENEMY;
             });
 
-            const hits = raycaster.intersectObjects(targets);
+            // Use recursive: true to intersect children of Groups
+            const hits = raycaster.intersectObjects(targets, true);
 
             if (hits.length > 0) {
-                const hitMesh = hits[0].object;
-                const unitId = hitMesh.userData.unitId;
+                // Find the parent Group that has unitId
+                const hitGroup = findUnitGroup(hits[0].object);
+                if (!hitGroup) return;
+
+                const unitId = hitGroup.userData.unitId;
                 const unit = [...gameState.units.enemy, gameState.boss.enemy].find(u => u && u.id === unitId);
 
                 if (unit) {
