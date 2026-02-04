@@ -626,6 +626,68 @@
             spawnEnemyMinions(gameState);
         }
 
+        // Helper: Apply meteor damage and paint (myTeam paints, enemyTeam takes damage)
+        function applyMeteor(state, x, y, myTeam, enemyTeam) {
+            const radius = 5;
+            const meteorDamage = 500;
+            const enemyUnits = myTeam === GAME_CONFIG.TEAM_PLAYER ? state.units.enemy : state.units.player;
+            const enemyBoss = myTeam === GAME_CONFIG.TEAM_PLAYER ? state.boss.enemy : state.boss.player;
+            const killStat = myTeam === GAME_CONFIG.TEAM_PLAYER ? 'playerKills' : 'enemyKills';
+
+            // Damage enemy units
+            const remaining = enemyUnits.filter(unit => {
+                const dist = Math.abs(unit.x - x) + Math.abs(unit.y - y);
+                if (dist <= radius) {
+                    if (unit.type === 'turret') {
+                        unit.hp -= meteorDamage;
+                        if (unit.hp <= 0) {
+                            state.stats[killStat] = (state.stats[killStat] || 0) + 1;
+                            return false;
+                        }
+                        return true;
+                    }
+                    state.stats[killStat] = (state.stats[killStat] || 0) + 1;
+                    return false;
+                }
+                return true;
+            });
+
+            // Update the correct units array
+            if (myTeam === GAME_CONFIG.TEAM_PLAYER) {
+                state.units.enemy = remaining;
+            } else {
+                state.units.player = remaining;
+            }
+
+            // Damage enemy boss
+            if (enemyBoss && enemyBoss.hp > 0) {
+                const bossDist = Math.abs(enemyBoss.x - x) + Math.abs(enemyBoss.y - y);
+                if (bossDist <= radius + 3) {
+                    enemyBoss.hp -= meteorDamage;
+                    if (enemyBoss.hp <= 0) {
+                        enemyBoss.hp = 0;
+                        enemyBoss.state = 'dead';
+                        state.stats[killStat] = (state.stats[killStat] || 0) + 1;
+                    }
+                }
+            }
+
+            // Paint tiles with myTeam color
+            for (let dy = -radius; dy <= radius; dy++) {
+                for (let dx = -radius; dx <= radius; dx++) {
+                    const gx = Math.floor(x + dx);
+                    const gy = Math.floor(y + dy);
+                    if (gx >= 0 && gx < GAME_CONFIG.GRID_WIDTH &&
+                        gy >= 0 && gy < GAME_CONFIG.GRID_HEIGHT) {
+                        if (Math.abs(dx) + Math.abs(dy) <= radius) {
+                            state.grid[gy][gx] = myTeam;
+                        }
+                    }
+                }
+            }
+            updateTileCount(state);
+        }
+
         // HOST: Handle messages from other players
         function handleNetworkMessage(data, senderTeam, senderRole) {
             switch(data.type) {
@@ -656,18 +718,37 @@
                     break;
 
                 case 'skill':
-                    // Skills from commanders
+                    // Skills from commanders - HOST spawns directly (no ready check needed)
+                    // Commander already verified ready state locally
                     if (senderTeam === 'blue') {
-                        if (data.skill === 'hero') useSkillHero(gameState, data.x, data.y);
-                        if (data.skill === 'turret') useSkillTurret(gameState, data.x, data.y);
-                        if (data.skill === 'meteor') useSkillMeteor(gameState, data.x, data.y);
-                        if (data.skill === 'boss') useSkillBoss(gameState);
+                        if (data.skill === 'hero') {
+                            spawnHero(gameState, data.x, data.y);
+                        }
+                        if (data.skill === 'turret') {
+                            spawnTurret(gameState, data.x, data.y);
+                        }
+                        if (data.skill === 'meteor') {
+                            // Blue meteor - damage red units, paint blue
+                            applyMeteor(gameState, data.x, data.y, GAME_CONFIG.TEAM_PLAYER, GAME_CONFIG.TEAM_ENEMY);
+                        }
+                        if (data.skill === 'boss') {
+                            if (!gameState.boss.player) spawnBoss(gameState, GAME_CONFIG.TEAM_PLAYER);
+                        }
                     } else {
-                        // Red team skills - use enemy versions
-                        if (data.skill === 'hero') useSkillHeroEnemy(gameState, data.x, data.y);
-                        if (data.skill === 'turret') useSkillTurretEnemy(gameState, data.x, data.y);
-                        if (data.skill === 'meteor') useSkillMeteorEnemy(gameState, data.x, data.y);
-                        if (data.skill === 'boss') useSkillBossEnemy(gameState);
+                        // Red team skills
+                        if (data.skill === 'hero') {
+                            gameState.units.enemy.push(createUnit('hero', GAME_CONFIG.TEAM_ENEMY, data.x, data.y));
+                        }
+                        if (data.skill === 'turret') {
+                            gameState.units.enemy.push(createUnit('turret', GAME_CONFIG.TEAM_ENEMY, data.x, data.y));
+                        }
+                        if (data.skill === 'meteor') {
+                            // Red meteor - damage blue units, paint red
+                            applyMeteor(gameState, data.x, data.y, GAME_CONFIG.TEAM_ENEMY, GAME_CONFIG.TEAM_PLAYER);
+                        }
+                        if (data.skill === 'boss') {
+                            if (!gameState.boss.enemy) spawnBoss(gameState, GAME_CONFIG.TEAM_ENEMY);
+                        }
                     }
                     break;
 
