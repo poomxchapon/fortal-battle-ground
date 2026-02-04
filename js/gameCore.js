@@ -104,10 +104,10 @@ const initGrid = (state) => {
     for (let y = 0; y < GAME_CONFIG.GRID_HEIGHT; y++) {
         state.grid[y] = [];
         for (let x = 0; x < GAME_CONFIG.GRID_WIDTH; x++) {
-            // Starting territories
-            if (y < 5) {
+            // Starting territories (2 rows each side)
+            if (y < 2) {
                 state.grid[y][x] = GAME_CONFIG.TEAM_ENEMY; // Enemy side (top)
-            } else if (y >= GAME_CONFIG.GRID_HEIGHT - 5) {
+            } else if (y >= GAME_CONFIG.GRID_HEIGHT - 2) {
                 state.grid[y][x] = GAME_CONFIG.TEAM_PLAYER; // Player side (bottom)
             } else {
                 state.grid[y][x] = 0; // Neutral
@@ -575,12 +575,53 @@ const updateBoss = (state, deltaTime) => {
 };
 
 // ==================== AI CONTROLLER ====================
+let aiTurretTimer = 0;
+let aiHeroTimer = 0;
+
 const updateAI = (state, deltaTime) => {
     // AI spawns minions periodically (handled by main game loop)
 
-    // AI might spawn boss when losing
-    if (!state.boss.enemy && state.stats.enemyTiles < state.stats.playerTiles * 0.5) {
-        if (Math.random() < 0.001) { // Small chance per frame
+    // AI spawns turrets every 15-25 seconds
+    aiTurretTimer += deltaTime;
+    if (aiTurretTimer >= 15 + Math.random() * 10) {
+        aiTurretTimer = 0;
+        // Find a spot in enemy territory to place turret
+        const enemyTiles = [];
+        for (let y = 0; y < GAME_CONFIG.GRID_HEIGHT / 2; y++) {
+            for (let x = 0; x < GAME_CONFIG.GRID_WIDTH; x++) {
+                if (state.grid[y][x] === GAME_CONFIG.TEAM_ENEMY) {
+                    enemyTiles.push({ x, y });
+                }
+            }
+        }
+        if (enemyTiles.length > 0) {
+            const spot = enemyTiles[Math.floor(Math.random() * enemyTiles.length)];
+            // Spawn enemy turret
+            const turret = createUnit('turret', GAME_CONFIG.TEAM_ENEMY, spot.x, spot.y);
+            state.units.enemy.push(turret);
+        }
+    }
+
+    // AI spawns heroes every 20-30 seconds
+    aiHeroTimer += deltaTime;
+    if (aiHeroTimer >= 20 + Math.random() * 10) {
+        aiHeroTimer = 0;
+        // Spawn hero at enemy base
+        const x = randomRange(2, GAME_CONFIG.GRID_WIDTH - 3);
+        const hero = createUnit('hero', GAME_CONFIG.TEAM_ENEMY, x, 2);
+        state.units.enemy.push(hero);
+    }
+
+    // AI might spawn boss when losing badly
+    if (!state.boss.enemy && state.stats.enemyTiles < state.stats.playerTiles * 0.4) {
+        if (Math.random() < 0.002) { // Higher chance when losing
+            spawnBoss(state, GAME_CONFIG.TEAM_ENEMY);
+        }
+    }
+
+    // AI spawns boss when player has boss (counter)
+    if (!state.boss.enemy && state.boss.player) {
+        if (Math.random() < 0.01) {
             spawnBoss(state, GAME_CONFIG.TEAM_ENEMY);
         }
     }
