@@ -13,6 +13,25 @@
         }
         #gameCanvas { display: block; }
 
+        /* Mobile Block */
+        #mobileBlock {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            text-align: center;
+            z-index: 9999;
+            padding: 20px;
+        }
+        #mobileBlock .icon { font-size: 4em; margin-bottom: 20px; }
+        #mobileBlock h1 { font-size: 1.5em; margin-bottom: 10px; }
+        #mobileBlock p { color: #888; max-width: 300px; }
+        #mobileBlock.hidden { display: none; }
+
         /* HUD */
         #hud {
             position: fixed;
@@ -240,6 +259,13 @@
     </style>
 </head>
 <body>
+    <!-- Mobile Block Screen -->
+    <div id="mobileBlock" class="hidden">
+        <div class="icon">🖥️</div>
+        <h1>Desktop Only</h1>
+        <p>This game requires a desktop browser with keyboard and mouse. Please open on a computer.</p>
+    </div>
+
     <canvas id="gameCanvas"></canvas>
 
     <!-- HUD -->
@@ -1124,9 +1150,19 @@
             camera.updateProjectionMatrix();
         });
 
+        // ==================== MOBILE CHECK ====================
+        function isMobile() {
+            return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+                || (navigator.maxTouchPoints && navigator.maxTouchPoints > 2);
+        }
+
         // ==================== INIT ====================
-        initThreeJS();
-        initNetworking();
+        if (isMobile()) {
+            document.getElementById('mobileBlock').classList.remove('hidden');
+        } else {
+            initThreeJS();
+            initNetworking();
+        }
     </script>
 </body>
 </html>
