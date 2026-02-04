@@ -286,7 +286,7 @@
     <!-- HUD -->
     <div id="hud">
         <div class="hud-section">
-            <div class="role-badge">Striker <span style="opacity:0.6;font-size:0.7em">v1.4.0</span></div>
+            <div class="role-badge">Striker <span style="opacity:0.6;font-size:0.7em">v1.5.0</span></div>
             <div class="stat-box">
                 <div class="stat-label">Room</div>
                 <div class="stat-value" id="roomDisplay">---</div>
@@ -1024,11 +1024,16 @@
                     // Feet animation
                     if (mesh.children[5]) mesh.children[5].position.y = GAME_CONFIG.UNITS.soldier.size * 0.1 + Math.abs(Math.sin(elapsed * 8)) * 0.1;
                     if (mesh.children[6]) mesh.children[6].position.y = GAME_CONFIG.UNITS.soldier.size * 0.1 + Math.abs(Math.cos(elapsed * 8)) * 0.1;
+                    // Face movement direction
+                    mesh.rotation.y = unit.team === GAME_CONFIG.TEAM_PLAYER ? Math.PI : 0;
                 } else if (unit.type === 'hero') {
                     // Majestic floating
                     mesh.children[0].position.y = GAME_CONFIG.UNITS.hero.size * 0.8 + Math.sin(elapsed * 3) * 0.2;
                     // Cape flutter
                     if (mesh.children[7]) mesh.children[7].rotation.x = Math.sin(elapsed * 5) * 0.1;
+                    // Face movement direction
+                    const baseRot = unit.team === GAME_CONFIG.TEAM_PLAYER ? Math.PI : 0;
+                    mesh.rotation.y = baseRot;
                 } else if (unit.type === 'turret') {
                     // Dome rotation
                     if (mesh.children[2]) mesh.children[2].rotation.y = elapsed * 2;

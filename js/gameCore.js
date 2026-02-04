@@ -364,6 +364,16 @@ const updateUnits = (state, deltaTime) => {
 };
 
 const updateMinion = (unit, enemies, state, deltaTime, team) => {
+    // Check if minion reached enemy base - remove it
+    if (team === GAME_CONFIG.TEAM_PLAYER && unit.y <= 1) {
+        unit.state = 'dead'; // Remove when reaching enemy base
+        return;
+    }
+    if (team === GAME_CONFIG.TEAM_ENEMY && unit.y >= GAME_CONFIG.GRID_HEIGHT - 2) {
+        unit.state = 'dead'; // Remove when reaching player base
+        return;
+    }
+
     const { target, distance } = findNearestEnemy(unit, enemies);
 
     if (target && distance < 1.5) {
