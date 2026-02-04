@@ -172,7 +172,7 @@
         gameState.players[myTeam].vanguard.connected = true;
 
         // ==================== PEER CONNECTION ====================
-        const peerId = `fortal-pvp-${roomId}-${myTeam}-vanguard`;
+        const peerId = `fortal_pvp_${roomId}_${myTeam}_vanguard`;
         let peer = null;
         let connections = {};
 
@@ -205,10 +205,12 @@
             connections[conn.peer] = conn;
 
             conn.on('open', () => {
-                // Parse peer ID to get team and role
-                const parts = conn.peer.split('-');
-                const team = parts[3]; // blue or red
-                const role = parts[4]; // vanguard, striker, commander
+                // Parse peer ID to get team and role (format: fortal_pvp_ROOM_TEAM_ROLE)
+                const parts = conn.peer.split('_');
+                const team = parts[parts.length - 2]; // blue or red
+                const role = parts[parts.length - 1]; // vanguard, striker, commander
+
+                console.log('Player joined:', team, role);
 
                 if (team && role && gameState.players[team]) {
                     gameState.players[team][role].connected = true;
@@ -231,7 +233,7 @@
         }
 
         function connectToHost() {
-            const hostId = `fortal-pvp-${roomId}-blue-vanguard`;
+            const hostId = `fortal_pvp_${roomId}_blue_vanguard`;
             const conn = peer.connect(hostId, { reliable: true });
 
             conn.on('open', () => {
