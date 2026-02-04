@@ -6,253 +6,750 @@
     <title>Fortal PvP - Commander</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { overflow: hidden; background: #0a0a1a; font-family: 'Segoe UI', sans-serif; }
+        body {
+            overflow: hidden;
+            background: #0a0a1a;
+            font-family: 'Segoe UI', sans-serif;
+        }
         #gameCanvas { display: block; }
 
+        /* Mobile Block */
+        #mobileBlock {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            text-align: center;
+            z-index: 9999;
+            padding: 20px;
+        }
+        #mobileBlock .icon { font-size: 4em; margin-bottom: 20px; }
+        #mobileBlock h1 { font-size: 1.5em; margin-bottom: 10px; }
+        #mobileBlock p { color: #888; max-width: 300px; }
+        #mobileBlock.hidden { display: none; }
+
+        /* HUD */
         #hud {
-            position: fixed; top: 0; left: 0; right: 0;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
             padding: 15px 20px;
-            display: flex; justify-content: space-between; align-items: center;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             background: linear-gradient(to bottom, rgba(0,0,0,0.8), transparent);
-            color: white; z-index: 100;
+            color: white;
+            z-index: 100;
         }
         .hud-section { display: flex; gap: 15px; align-items: center; }
         .role-badge {
-            padding: 8px 20px; border-radius: 20px; font-weight: bold;
-            text-transform: uppercase; font-size: 1.1em;
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-weight: bold;
+            text-transform: uppercase;
+            background: #e67e22;
+            font-size: 1.1em;
         }
         .role-badge.blue { background: #3498db; }
         .role-badge.red { background: #e74c3c; }
         .stat-box {
             background: rgba(255,255,255,0.1);
-            padding: 8px 15px; border-radius: 10px; text-align: center;
+            padding: 8px 15px;
+            border-radius: 10px;
+            text-align: center;
         }
         .stat-label { font-size: 0.7em; color: #888; text-transform: uppercase; }
         .stat-value { font-size: 1.3em; font-weight: bold; }
-        #timer { font-size: 2em; font-weight: bold; color: #fff; }
 
-        #skillBar {
-            position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
-            display: flex; gap: 15px; z-index: 100;
+        #timer {
+            font-size: 2em;
+            font-weight: bold;
+            color: #fff;
+            text-shadow: 0 0 10px rgba(255,255,255,0.5);
+        }
+        #timer.warning { color: #e74c3c; animation: pulse 1s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+        /* Skills Panel */
+        #skillsPanel {
+            position: fixed;
+            bottom: 50px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 15px;
+            z-index: 100;
         }
         .skill-btn {
-            width: 80px; height: 80px;
-            border: 3px solid #444; border-radius: 15px;
-            background: rgba(0,0,0,0.7);
-            cursor: pointer; position: relative;
-            display: flex; flex-direction: column;
-            justify-content: center; align-items: center;
-            color: white; transition: all 0.2s;
+            width: 100px;
+            height: 100px;
+            border: 3px solid #444;
+            border-radius: 15px;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            overflow: hidden;
         }
-        .skill-btn:hover:not(.disabled) { border-color: #f39c12; transform: scale(1.05); }
-        .skill-btn.disabled { opacity: 0.5; cursor: not-allowed; }
-        .skill-btn .icon { font-size: 2em; }
-        .skill-btn .name { font-size: 0.7em; margin-top: 5px; }
+        .skill-btn:hover:not(.disabled):not(.locked) {
+            border-color: #e67e22;
+            transform: scale(1.05);
+        }
+        .skill-btn.active {
+            border-color: #e67e22;
+            box-shadow: 0 0 20px rgba(230, 126, 34, 0.5);
+        }
+        .skill-btn.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .skill-btn.locked {
+            border-color: #666;
+            cursor: not-allowed;
+        }
+        .skill-btn .icon { font-size: 2em; margin-bottom: 5px; }
+        .skill-btn .name { font-size: 0.75em; font-weight: bold; }
         .skill-btn .cooldown {
-            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0,0,0,0.7); border-radius: 12px;
-            display: flex; justify-content: center; align-items: center;
-            font-size: 1.5em; font-weight: bold;
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.5em;
+            font-weight: bold;
         }
         .skill-btn .cooldown.hidden { display: none; }
-        .skill-btn.active { border-color: #2ecc71; box-shadow: 0 0 20px rgba(46, 204, 113, 0.5); }
+        .skill-btn .hotkey {
+            position: absolute;
+            top: 5px;
+            left: 5px;
+            background: #333;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.7em;
+        }
 
+        /* Ultimate Gauge */
+        #ultimateGauge {
+            position: fixed;
+            bottom: 170px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 300px;
+            z-index: 100;
+        }
+        #ultimateGauge .label {
+            text-align: center;
+            color: #888;
+            font-size: 0.8em;
+            margin-bottom: 5px;
+        }
+        #ultimateGauge .bar {
+            height: 15px;
+            background: #333;
+            border-radius: 10px;
+            overflow: hidden;
+            border: 2px solid #444;
+        }
+        #ultimateGauge .fill {
+            height: 100%;
+            background: linear-gradient(to right, #8e44ad, #e74c3c, #f39c12);
+            transition: width 0.3s;
+        }
+        #ultimateGauge .percent {
+            text-align: center;
+            color: white;
+            font-weight: bold;
+            margin-top: 5px;
+        }
+
+        /* Territory bar */
         #territoryBar {
-            position: fixed; bottom: 0; left: 0; right: 0;
-            height: 20px; display: flex; z-index: 100;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 30px;
+            display: flex;
+            z-index: 100;
         }
-        #blueTerritory { background: #3498db; height: 100%; transition: width 0.3s; }
-        #redTerritory { background: #e74c3c; height: 100%; transition: width 0.3s; }
+        #playerTerritory {
+            background: linear-gradient(to right, #3498db, #2980b9);
+            height: 100%;
+            transition: width 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding-right: 10px;
+            color: white;
+            font-weight: bold;
+        }
+        #enemyTerritory {
+            background: linear-gradient(to left, #e74c3c, #c0392b);
+            height: 100%;
+            transition: width 0.3s;
+            display: flex;
+            align-items: center;
+            padding-left: 10px;
+            color: white;
+            font-weight: bold;
+        }
 
-        #waitingOverlay {
-            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0,0,0,0.9); display: flex;
-            flex-direction: column; justify-content: center; align-items: center;
-            color: white; z-index: 200;
+        /* Instructions */
+        #instructions {
+            position: fixed;
+            top: 80px;
+            left: 20px;
+            background: rgba(0,0,0,0.7);
+            padding: 15px;
+            border-radius: 10px;
+            color: white;
+            font-size: 0.85em;
+            z-index: 100;
+            max-width: 250px;
         }
-        #waitingOverlay.hidden { display: none; }
-        #waitingOverlay h2 { margin-bottom: 20px; }
-        #waitingOverlay p { color: #888; }
+        #instructions h3 { color: #e67e22; margin-bottom: 10px; }
+        kbd { background: #333; padding: 2px 8px; border-radius: 4px; font-family: monospace; }
 
-        #gameOverlay {
-            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0,0,0,0.9); display: flex;
-            flex-direction: column; justify-content: center; align-items: center;
-            color: white; z-index: 300;
+        /* Selected skill indicator */
+        #selectedSkill {
+            position: fixed;
+            bottom: 220px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(230, 126, 34, 0.9);
+            padding: 10px 30px;
+            border-radius: 10px;
+            color: white;
+            font-weight: bold;
+            z-index: 100;
         }
-        #gameOverlay.hidden { display: none; }
-        #gameOverlay h1 { font-size: 3em; margin-bottom: 20px; }
+        #selectedSkill.hidden { display: none; }
+
+        /* Game Over */
+        #gameOver {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.9);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 200;
+            color: white;
+        }
+        #gameOver.hidden { display: none; }
+        #gameOver h1 { font-size: 4em; margin-bottom: 20px; }
+        #gameOver .result { font-size: 2em; margin-bottom: 30px; }
+        #gameOver .stats { font-size: 1.2em; color: #888; margin-bottom: 30px; }
+        #gameOver .home-btn {
+            padding: 15px 40px;
+            font-size: 1.2em;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+        #gameOver .home-btn:hover { background: #2980b9; }
+
+        /* Camera Controls */
+        #cameraControls {
+            position: fixed;
+            top: 80px;
+            left: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            z-index: 100;
+        }
+        .cam-btn {
+            padding: 10px 15px;
+            background: rgba(0,0,0,0.7);
+            border: 2px solid #444;
+            border-radius: 8px;
+            color: white;
+            cursor: pointer;
+            font-size: 0.85em;
+            transition: all 0.2s;
+        }
+        .cam-btn:hover { border-color: #e67e22; background: rgba(230,126,34,0.3); }
+        .cam-btn.active { border-color: #e67e22; background: rgba(230,126,34,0.5); }
+        .cam-btn .icon { margin-right: 5px; }
     </style>
 </head>
 <body>
-    <div id="waitingOverlay">
-        <h2>⚔️ PvP Mode - Commander</h2>
-        <p>Connecting to host...</p>
-        <p id="connectionStatus">Waiting...</p>
+    <!-- Mobile Block Screen -->
+    <div id="mobileBlock" class="hidden">
+        <div class="icon">🖥️</div>
+        <h1>Desktop Only</h1>
+        <p>This game requires a desktop browser with keyboard and mouse. Please open on a computer.</p>
     </div>
 
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- HUD -->
     <div id="hud">
         <div class="hud-section">
-            <div class="role-badge" id="teamBadge">COMMANDER</div>
+            <div class="role-badge">Commander <span style="opacity:0.6;font-size:0.7em">v2.1.0</span></div>
             <div class="stat-box">
-                <div class="stat-label">Blue Tiles</div>
-                <div class="stat-value" id="blueTiles">0</div>
-            </div>
-            <div class="stat-box">
-                <div class="stat-label">Red Tiles</div>
-                <div class="stat-value" id="redTiles">0</div>
+                <div class="stat-label">Room</div>
+                <div class="stat-value" id="roomDisplay">---</div>
             </div>
         </div>
         <div id="timer">5:00</div>
         <div class="hud-section">
             <div class="stat-box">
-                <div class="stat-label">Blue Kills</div>
-                <div class="stat-value" id="blueKills">0</div>
+                <div class="stat-label">Kills</div>
+                <div class="stat-value" id="killCount">0</div>
             </div>
             <div class="stat-box">
-                <div class="stat-label">Red Kills</div>
-                <div class="stat-value" id="redKills">0</div>
+                <div class="stat-label">Units</div>
+                <div class="stat-value" id="unitCount">0</div>
             </div>
         </div>
     </div>
 
-    <canvas id="gameCanvas"></canvas>
+    <!-- Instructions -->
+    <div id="instructions">
+        <h3>COMMANDER - The Architect</h3>
+        <p><kbd>1</kbd> Hero Summon</p>
+        <p><kbd>2</kbd> Turret Drop</p>
+        <p><kbd>3</kbd> Meteor Shower</p>
+        <p><kbd>4</kbd> Summon Boss</p>
+        <p style="margin-top:10px;">Click on map to deploy</p>
+    </div>
 
-    <div id="skillBar">
-        <div class="skill-btn" id="heroBtn" onclick="selectSkill('hero')">
-            <div class="icon">⚔️</div>
-            <div class="name">HERO</div>
-            <div class="cooldown hidden" id="heroCooldown">0</div>
+    <!-- Camera Controls -->
+    <div id="cameraControls">
+        <button class="cam-btn" onclick="setCameraAngle(0)"><span class="icon">🔽</span>Top</button>
+        <button class="cam-btn active" onclick="setCameraAngle(1)"><span class="icon">📐</span>2.5D</button>
+        <button class="cam-btn" onclick="setCameraAngle(2)"><span class="icon">🎯</span>Angled</button>
+    </div>
+
+    <!-- Ultimate Gauge -->
+    <div id="ultimateGauge">
+        <div class="label">ULTIMATE GAUGE</div>
+        <div class="bar"><div class="fill" id="ultimateFill" style="width:0%"></div></div>
+        <div class="percent" id="ultimatePercent">0%</div>
+    </div>
+
+    <!-- Selected Skill Indicator -->
+    <div id="selectedSkill" class="hidden">Select target location</div>
+
+    <!-- Skills Panel -->
+    <div id="skillsPanel">
+        <div class="skill-btn" data-skill="hero" onclick="selectSkill('hero')">
+            <span class="hotkey">1</span>
+            <span class="icon">⚔️</span>
+            <span class="name">Hero</span>
+            <div class="cooldown hidden" id="heroCd"></div>
         </div>
-        <div class="skill-btn" id="turretBtn" onclick="selectSkill('turret')">
-            <div class="icon">🏰</div>
-            <div class="name">TURRET</div>
-            <div class="cooldown hidden" id="turretCooldown">0</div>
+        <div class="skill-btn" data-skill="turret" onclick="selectSkill('turret')">
+            <span class="hotkey">2</span>
+            <span class="icon">🗼</span>
+            <span class="name">Turret</span>
+            <div class="cooldown hidden" id="turretCd"></div>
         </div>
-        <div class="skill-btn" id="meteorBtn" onclick="selectSkill('meteor')">
-            <div class="icon">☄️</div>
-            <div class="name">METEOR</div>
-            <div class="cooldown hidden" id="meteorCooldown">0</div>
+        <div class="skill-btn" data-skill="meteor" onclick="selectSkill('meteor')">
+            <span class="hotkey">3</span>
+            <span class="icon">☄️</span>
+            <span class="name">Meteor</span>
+            <div class="cooldown hidden" id="meteorCd"></div>
+        </div>
+        <div class="skill-btn locked" data-skill="boss" onclick="selectSkill('boss')">
+            <span class="hotkey">4</span>
+            <span class="icon">👹</span>
+            <span class="name">Boss</span>
+            <div class="cooldown hidden" id="bossCd">🔒</div>
         </div>
     </div>
 
+    <!-- Territory Bar -->
     <div id="territoryBar">
-        <div id="blueTerritory" style="width: 50%"></div>
-        <div id="redTerritory" style="width: 50%"></div>
+        <div id="playerTerritory" style="width:50%;">50%</div>
+        <div id="enemyTerritory" style="width:50%;">50%</div>
     </div>
 
-    <div id="gameOverlay" class="hidden">
-        <h1 id="winnerText">BLUE WINS!</h1>
-        <button onclick="location.reload()" style="padding: 15px 30px; font-size: 1.2em; border: none; border-radius: 10px; background: #3498db; color: white; cursor: pointer;">Play Again</button>
+    <!-- Game Over -->
+    <div id="gameOver" class="hidden">
+        <h1 id="resultTitle">VICTORY!</h1>
+        <div class="result" id="resultText">Your team wins!</div>
+        <div class="stats" id="resultStats">Team kills: 0 | Territory: 0%</div>
+        <button class="home-btn" onclick="location.href='lobby.html'">🏠 Back to PvP Lobby</button>
     </div>
 
-    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <!-- Waiting Room -->
+    <div id="waitingRoom">
+        <div class="waiting-box">
+            <h1>⚔️ FORTAL BATTLE GROUND ⚔️</h1>
+            <p class="room-code">Room: <span id="waitingRoomId">----</span></p>
+
+            <div class="players-status">
+                <h3>Players</h3>
+                <div class="player-slot" id="slotVanguard">
+                    <span class="dot waiting"></span>
+                    <span class="role-name">🏃 Vanguard (Host)</span>
+                    <span class="status">Waiting...</span>
+                </div>
+                <div class="player-slot" id="slotStriker">
+                    <span class="dot waiting"></span>
+                    <span class="role-name">🔫 Striker</span>
+                    <span class="status">Waiting...</span>
+                </div>
+                <div class="player-slot ready" id="slotCommander">
+                    <span class="dot ready"></span>
+                    <span class="role-name">👑 Commander</span>
+                    <span class="status">You</span>
+                </div>
+            </div>
+
+            <div class="waiting-msg" id="waitingMsg">
+                <span class="spinner"></span>
+                Connecting to host...
+            </div>
+        </div>
+    </div>
+
+    <style>
+        #waitingRoom {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 300;
+        }
+        #waitingRoom.hidden { display: none; }
+        .waiting-box {
+            background: rgba(255,255,255,0.1);
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+            min-width: 320px;
+            max-width: 90%;
+        }
+        .waiting-box h1 { margin-bottom: 10px; font-size: 1.4em; }
+        .room-code { font-size: 1.5em; color: #f39c12; margin-bottom: 30px; }
+        .room-code span { font-weight: bold; font-size: 1.3em; }
+        .players-status { margin: 20px 0; text-align: left; }
+        .players-status h3 { color: #888; margin-bottom: 15px; text-align: center; }
+        .player-slot {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 15px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 10px;
+            margin: 8px 0;
+        }
+        .player-slot .dot {
+            width: 12px; height: 12px;
+            border-radius: 50%;
+            background: #666;
+        }
+        .player-slot .dot.ready { background: #2ecc71; }
+        .player-slot .dot.waiting { background: #666; animation: blink 1.5s infinite; }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+        .player-slot .role-name { flex: 1; font-weight: bold; font-size: 0.95em; }
+        .player-slot .status { color: #888; font-size: 0.85em; }
+        .player-slot.ready .status { color: #2ecc71; }
+        .waiting-msg {
+            margin-top: 25px;
+            padding: 15px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        .spinner {
+            width: 20px; height: 20px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-top-color: #e67e22;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+
+    <!-- Three.js -->
     <script src="https://unpkg.com/three@0.152.0/build/three.min.js"></script>
-    <script src="gameCore.js"></script>
+    <!-- PeerJS -->
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <!-- Game Core -->
+    <script src="../js/gameCore.js"></script>
+
     <script>
-        const urlParams = new URLSearchParams(window.location.search);
-        const roomId = urlParams.get('room') || 'pvp-default';
-        const myTeam = urlParams.get('team') || 'blue';
+        // ==================== CONFIG ====================
+        const params = new URLSearchParams(window.location.search);
+        const ROOM_ID = params.get('room') || 'PVP-0000';
+        const MY_TEAM = params.get('team') || 'blue';
+        const MY_ROLE = 'commander';
 
-        document.getElementById('teamBadge').textContent = `${myTeam.toUpperCase()} COMMANDER`;
-        document.getElementById('teamBadge').className = `role-badge ${myTeam}`;
+        // Update UI for team
+        document.addEventListener('DOMContentLoaded', () => {
+            const badge = document.querySelector('.role-badge');
+            if (badge) {
+                badge.className = 'role-badge ' + MY_TEAM;
+                badge.innerHTML = `${MY_TEAM.toUpperCase()} Commander <span style="opacity:0.6;font-size:0.7em">PvP</span>`;
+            }
+        });
 
+        // ==================== GAME STATE ====================
         let gameState = createGameState();
+        initGrid(gameState);
+        gameState.players.commander.connected = true;
+        gameState.gameStarted = false; // Wait for host to start
+
         let selectedSkill = null;
-        let isConnected = false;
+        let isConnectedToHost = false;
 
-        // ==================== PEER CONNECTION ====================
-        const peerId = `fortal_pvp_${roomId}_${myTeam}_commander`;
-        const hostId = `fortal_pvp_${roomId}_blue_vanguard`;
+        // ==================== NETWORKING ====================
         let peer = null;
-        let hostConn = null;
+        let connections = {};
 
-        function initPeer() {
-            peer = new Peer(peerId, { debug: 0 });
+        let retryCount = 0;
+        const MAX_RETRIES = 3;
 
-            peer.on('open', () => {
-                document.getElementById('connectionStatus').textContent = 'Connecting to host...';
+        function initNetworking() {
+            const peerId = `fortal_pvp_${ROOM_ID}_${MY_TEAM}_commander`;
+            console.log('Creating peer with ID:', peerId);
+
+            peer = new Peer(peerId, {
+                debug: 1
+            });
+
+            peer.on('open', (id) => {
+                console.log('✅ Connected as:', id);
+                document.getElementById('roomDisplay').textContent = ROOM_ID;
+                document.getElementById('waitingRoomId').textContent = ROOM_ID;
+                updateWaitingMsg('Connecting to host...');
                 connectToHost();
             });
 
+            peer.on('connection', (conn) => handleConnection(conn));
+
             peer.on('error', (err) => {
-                console.error('Peer error:', err);
-                document.getElementById('connectionStatus').textContent = 'Connection error: ' + err.type;
+                console.error('❌ Peer error:', err);
+                if (err.type === 'peer-unavailable') {
+                    if (retryCount < MAX_RETRIES) {
+                        retryCount++;
+                        updateWaitingMsg(`Host not found, retrying (${retryCount}/${MAX_RETRIES})...`);
+                        setTimeout(connectToHost, 2000);
+                    } else {
+                        updateWaitingMsg('❌ Host not found! Make sure Vanguard opens first. <button onclick="location.reload()">Retry</button>');
+                    }
+                } else {
+                    updateWaitingMsg(`⚠️ Error: ${err.type} <button onclick="location.reload()">Retry</button>`);
+                }
+            });
+
+            peer.on('disconnected', () => {
+                console.log('⚠️ Disconnected, reconnecting...');
+                peer.reconnect();
             });
         }
 
         function connectToHost() {
-            hostConn = peer.connect(hostId, { reliable: true });
+            // Always connect to blue vanguard (host)
+            const hostId = `fortal_pvp_${ROOM_ID}_blue_vanguard`;
+            console.log('🔗 Connecting to host:', hostId);
+            const hostConn = peer.connect(hostId, { reliable: true });
+            if (hostConn) handleConnection(hostConn);
+        }
 
-            hostConn.on('open', () => {
-                isConnected = true;
-                document.getElementById('connectionStatus').textContent = 'Connected! Waiting for game to start...';
-            });
+        function updateWaitingMsg(msg) {
+            const el = document.getElementById('waitingMsg');
+            if (el) el.innerHTML = `<span class="spinner"></span>${msg}`;
+        }
 
-            hostConn.on('data', (data) => {
-                if (data.type === 'sync') {
-                    gameState = data.state;
-                    if (gameState.gameStarted && document.getElementById('waitingOverlay').className !== 'hidden') {
-                        startGame();
-                    }
-                    updateHUD();
-                    updateSkillBar();
-                    if (gameState.gameEnded) showGameOver();
-                } else if (data.type === 'gameStart') {
-                    startGame();
+        function updateWaitingRoom() {
+            const slot = document.getElementById('slotVanguard');
+            if (isConnectedToHost) {
+                slot.classList.add('ready');
+                slot.querySelector('.dot').classList.remove('waiting');
+                slot.querySelector('.dot').classList.add('ready');
+                slot.querySelector('.status').textContent = 'Ready';
+                updateWaitingMsg('Waiting for host to start...');
+            }
+        }
+
+        function handleConnection(conn) {
+            const role = conn.peer.split('-').pop();
+            connections[role] = conn;
+
+            conn.on('open', () => {
+                gameState.players[role].connected = true;
+                if (role === 'vanguard') {
+                    isConnectedToHost = true;
+                    updateWaitingRoom();
                 }
             });
 
-            hostConn.on('close', () => {
-                isConnected = false;
-                document.getElementById('connectionStatus').textContent = 'Disconnected from host';
+            conn.on('close', () => {
+                if (role === 'vanguard') {
+                    isConnectedToHost = false;
+                    updateConnectionStatus('Disconnected from host');
+                }
             });
+
+            conn.on('data', (data) => {
+                if (data.type === 'gameStart') {
+                    gameState.gameStarted = true;
+                    document.getElementById('waitingRoom').classList.add('hidden');
+                }
+                else if (data.type === 'delta') {
+                    // Optimized delta sync
+                    applyDeltaSync(data);
+                    isConnectedToHost = true;
+                }
+                else if (data.type === 'sync') {
+                    // Full sync (backup)
+                    const mySkills = gameState.players.commander.skills;
+
+                    gameState.grid = JSON.parse(JSON.stringify(data.state.grid));
+                    gameState.units = JSON.parse(JSON.stringify(data.state.units));
+                    gameState.boss = JSON.parse(JSON.stringify(data.state.boss));
+                    gameState.stats = data.state.stats;
+                    gameState.timeRemaining = data.state.timeRemaining;
+                    gameState.gameEnded = data.state.gameEnded;
+                    gameState.players = data.state.players;
+
+                    if (data.state.gameStarted && !gameState.gameStarted) {
+                        gameState.gameStarted = true;
+                        document.getElementById('waitingRoom').classList.add('hidden');
+                    }
+
+                    gameState.players.commander.skills = mySkills;
+                    gameState.players.commander.connected = true;
+                    isConnectedToHost = true;
+                }
+                else if (data.type === 'gameEnd') {
+                    // Game ended - show game over immediately
+                    gameState.gameEnded = true;
+                    gameState.stats = data.stats;
+                    showGameOver();
+                }
+            });
+        }
+
+        // Apply delta sync (optimized)
+        function applyDeltaSync(d) {
+            gameState.timeRemaining = d.t;
+            gameState.stats.playerKills = d.pk;
+            gameState.stats.playerTiles = d.pt;
+            gameState.stats.enemyTiles = d.et;
+            gameState.gameEnded = d.ended;
+            gameState.players.vanguard.x = d.vx;
+            gameState.players.vanguard.y = d.vy;
+
+            // Apply grid changes
+            if (d.gc) {
+                d.gc.forEach(([x, y, team]) => {
+                    gameState.grid[y][x] = team;
+                });
+            }
+
+            // Rebuild units from compact format
+            const typeMap = { s: 'soldier', h: 'hero', t: 'turret', b: 'boss' };
+            const stateMap = { m: 'moving', f: 'fighting', d: 'dead' };
+
+            gameState.units.player = d.pu.map((arr) => {
+                const [id, t, x, y, hp, s, scanAngle] = arr;
+                const unit = {
+                    id, type: typeMap[t], team: GAME_CONFIG.TEAM_PLAYER,
+                    x: parseFloat(x), y: parseFloat(y), hp, state: stateMap[s],
+                    size: GAME_CONFIG.UNITS[typeMap[t]].size
+                };
+                if (scanAngle !== undefined) unit.scanAngle = parseFloat(scanAngle);
+                return unit;
+            });
+
+            gameState.units.enemy = d.eu.map((arr) => {
+                const [id, t, x, y, hp, s, scanAngle] = arr;
+                const unit = {
+                    id, type: typeMap[t], team: GAME_CONFIG.TEAM_ENEMY,
+                    x: parseFloat(x), y: parseFloat(y), hp, state: stateMap[s],
+                    size: GAME_CONFIG.UNITS[typeMap[t]].size
+                };
+                if (scanAngle !== undefined) unit.scanAngle = parseFloat(scanAngle);
+                return unit;
+            });
+
+            // Boss
+            if (d.bp) {
+                gameState.boss.player = {
+                    id: 'boss-player', type: 'boss', team: GAME_CONFIG.TEAM_PLAYER,
+                    x: parseFloat(d.bp[0]), y: parseFloat(d.bp[1]), hp: d.bp[2],
+                    weakPointVisible: d.bp[3] === 1, state: 'moving',
+                    size: GAME_CONFIG.UNITS.boss.size
+                };
+            } else {
+                gameState.boss.player = null;
+            }
+
+            if (d.be) {
+                gameState.boss.enemy = {
+                    id: 'boss-enemy', type: 'boss', team: GAME_CONFIG.TEAM_ENEMY,
+                    x: parseFloat(d.be[0]), y: parseFloat(d.be[1]), hp: d.be[2],
+                    weakPointVisible: d.be[3] === 1, state: 'moving',
+                    size: GAME_CONFIG.UNITS.boss.size
+                };
+            } else {
+                gameState.boss.enemy = null;
+            }
+
+            // Projectiles
+            if (d.proj) {
+                gameState.projectiles = d.proj.map(([id, x, y, tx, ty, team]) => ({
+                    id,
+                    x: parseFloat(x),
+                    y: parseFloat(y),
+                    targetX: parseFloat(tx),
+                    targetY: parseFloat(ty),
+                    team: team,
+                    alive: true
+                }));
+            } else {
+                gameState.projectiles = [];
+            }
         }
 
         function broadcast(data) {
-            if (hostConn && hostConn.open) {
-                hostConn.send(data);
-            }
-        }
-
-        // ==================== SKILLS ====================
-        function selectSkill(skill) {
-            const skills = gameState.players?.[myTeam]?.commander?.skills;
-            if (!skills || !skills[skill]?.ready) return;
-
-            document.querySelectorAll('.skill-btn').forEach(btn => btn.classList.remove('active'));
-
-            if (selectedSkill === skill) {
-                selectedSkill = null;
-            } else {
-                selectedSkill = skill;
-                document.getElementById(skill + 'Btn').classList.add('active');
-            }
-        }
-
-        function updateSkillBar() {
-            const skills = gameState.players?.[myTeam]?.commander?.skills;
-            if (!skills) return;
-
-            ['hero', 'turret', 'meteor'].forEach(skill => {
-                const btn = document.getElementById(skill + 'Btn');
-                const cooldownEl = document.getElementById(skill + 'Cooldown');
-
-                if (skills[skill].ready) {
-                    btn.classList.remove('disabled');
-                    cooldownEl.classList.add('hidden');
-                } else {
-                    btn.classList.add('disabled');
-                    cooldownEl.classList.remove('hidden');
-                    cooldownEl.textContent = Math.ceil(skills[skill].cooldown);
-                }
+            Object.values(connections).forEach(conn => {
+                if (conn.open) conn.send(data);
             });
         }
 
         // ==================== THREE.JS ====================
-        let scene, camera, renderer;
+        let scene, camera, renderer, raycaster, mouse;
+        let currentCameraAngle = 1; // 0=top, 1=2.5D (default), 2=angled
         let gridMeshes = [];
         let unitMeshes = {};
+        let projectileMeshes = {};
+        let targetMarker = null;
 
         function initThreeJS() {
             scene = new THREE.Scene();
@@ -261,20 +758,38 @@
             renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('gameCanvas'), antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
 
+            // Orthographic camera (top-down with slight angle)
             const aspect = window.innerWidth / window.innerHeight;
             const viewHeight = GAME_CONFIG.GRID_HEIGHT * GAME_CONFIG.CELL_SIZE / 2 + 5;
             const viewWidth = viewHeight * aspect;
 
             camera = new THREE.OrthographicCamera(-viewWidth, viewWidth, viewHeight, -viewHeight, 0.1, 1000);
-            camera.position.set(0, 50, 0);
+            // Default to 2.5D view
+            camera.position.set(0, 40, 30);
             camera.lookAt(0, 0, 0);
 
+            raycaster = new THREE.Raycaster();
+            mouse = new THREE.Vector2();
+
+            // Lights
             scene.add(new THREE.AmbientLight(0xffffff, 0.6));
             const dirLight = new THREE.DirectionalLight(0xffffff, 0.4);
-            dirLight.position.set(10, 20, 10);
+            dirLight.position.set(10, 30, 10);
             scene.add(dirLight);
 
+            // Create grid
             createGrid();
+
+            // Create target marker
+            const markerGeo = new THREE.RingGeometry(0.8, 1, 32);
+            const markerMat = new THREE.MeshBasicMaterial({ color: 0xe67e22, side: THREE.DoubleSide });
+            targetMarker = new THREE.Mesh(markerGeo, markerMat);
+            targetMarker.rotation.x = -Math.PI / 2;
+            targetMarker.position.y = 0.2;
+            targetMarker.visible = false;
+            scene.add(targetMarker);
+
+            animate();
         }
 
         function createGrid() {
@@ -289,49 +804,260 @@
                         0,
                         (y - GAME_CONFIG.GRID_HEIGHT / 2 + 0.5) * GAME_CONFIG.CELL_SIZE
                     );
+                    cell.userData = { gridX: x, gridY: y };
                     gridMeshes[y][x] = cell;
                     scene.add(cell);
                 }
             }
         }
 
-        function updateVisuals() {
-            // Update grid
+        // Track last grid state for efficient updates
+        let lastRenderedGrid = null;
+
+        function updateGrid() {
+            // Initialize tracking array on first call
+            if (!lastRenderedGrid) {
+                lastRenderedGrid = gameState.grid.map(row => row.map(() => -1));
+            }
+
+            // Only update cells that changed
             for (let y = 0; y < GAME_CONFIG.GRID_HEIGHT; y++) {
                 for (let x = 0; x < GAME_CONFIG.GRID_WIDTH; x++) {
-                    const state = gameState.grid?.[y]?.[x] || 0;
-                    const cell = gridMeshes[y][x];
-                    if (state === GAME_CONFIG.TEAM_BLUE) {
-                        cell.material.color.setHex(GAME_CONFIG.COLOR_BLUE);
-                    } else if (state === GAME_CONFIG.TEAM_RED) {
-                        cell.material.color.setHex(GAME_CONFIG.COLOR_RED);
-                    } else {
-                        cell.material.color.setHex(GAME_CONFIG.COLOR_NEUTRAL);
+                    const state = gameState.grid[y][x];
+                    if (state !== lastRenderedGrid[y][x]) {
+                        const cell = gridMeshes[y][x];
+                        if (state === GAME_CONFIG.TEAM_PLAYER) {
+                            cell.material.color.setHex(GAME_CONFIG.COLOR_PLAYER);
+                        } else if (state === GAME_CONFIG.TEAM_ENEMY) {
+                            cell.material.color.setHex(GAME_CONFIG.COLOR_ENEMY);
+                        } else {
+                            cell.material.color.setHex(GAME_CONFIG.COLOR_NEUTRAL);
+                        }
+                        lastRenderedGrid[y][x] = state;
                     }
                 }
             }
+        }
 
-            // Update units
-            const allUnits = [...(gameState.units?.blue || []), ...(gameState.units?.red || [])];
+        // Create health bar for units
+        function createHealthBar(width, height) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 64;
+            canvas.height = 8;
+            const ctx = canvas.getContext('2d');
+
+            ctx.fillStyle = '#333333';
+            ctx.fillRect(0, 0, 64, 8);
+            ctx.fillStyle = '#2ecc71';
+            ctx.fillRect(1, 1, 62, 6);
+
+            const texture = new THREE.CanvasTexture(canvas);
+            texture.needsUpdate = true;
+
+            const spriteMat = new THREE.SpriteMaterial({ map: texture, transparent: true });
+            const sprite = new THREE.Sprite(spriteMat);
+            sprite.scale.set(width, height, 1);
+            sprite.name = 'healthBar';
+            sprite.userData = { canvas, ctx, texture };
+            return sprite;
+        }
+
+        function updateHealthBar(sprite, currentHp, maxHp) {
+            if (!sprite || !sprite.userData.ctx) return;
+            const { ctx, texture } = sprite.userData;
+            const ratio = Math.max(0, currentHp / maxHp);
+
+            ctx.fillStyle = '#333333';
+            ctx.fillRect(0, 0, 64, 8);
+
+            let color = '#2ecc71';
+            if (ratio < 0.3) color = '#e74c3c';
+            else if (ratio < 0.6) color = '#f39c12';
+
+            ctx.fillStyle = color;
+            ctx.fillRect(1, 1, Math.floor(62 * ratio), 6);
+            texture.needsUpdate = true;
+        }
+
+        // Create fancy mesh for each unit type
+        function createUnitMesh(unit) {
+            const config = GAME_CONFIG.UNITS[unit.type];
+            const isPlayer = unit.team === GAME_CONFIG.TEAM_PLAYER;
+            const baseColor = isPlayer ? 0x3498db : 0xe74c3c;
+            const group = new THREE.Group();
+
+            if (unit.type === 'soldier') {
+                // Soldier: Sphere body + eyes (little minion)
+                const bodyGeo = new THREE.SphereGeometry(config.size * 0.5, 8, 6);
+                const bodyMat = new THREE.MeshStandardMaterial({
+                    color: baseColor,
+                    emissive: baseColor,
+                    emissiveIntensity: 0.2
+                });
+                const body = new THREE.Mesh(bodyGeo, bodyMat);
+                body.position.y = config.size * 0.5;
+                group.add(body);
+
+                // Eyes
+                const eyeGeo = new THREE.SphereGeometry(config.size * 0.12, 6, 6);
+                const eyeMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+                const leftEye = new THREE.Mesh(eyeGeo, eyeMat);
+                leftEye.position.set(-config.size * 0.15, config.size * 0.6, config.size * 0.35);
+                const rightEye = new THREE.Mesh(eyeGeo, eyeMat);
+                rightEye.position.set(config.size * 0.15, config.size * 0.6, config.size * 0.35);
+                group.add(leftEye, rightEye);
+
+            } else if (unit.type === 'hero') {
+                // Hero: Capsule body + crown
+                const bodyGeo = new THREE.CapsuleGeometry(config.size * 0.35, config.size * 0.6, 6, 12);
+                const bodyMat = new THREE.MeshStandardMaterial({
+                    color: 0xf1c40f,
+                    emissive: 0xf39c12,
+                    emissiveIntensity: 0.4,
+                    metalness: 0.7,
+                    roughness: 0.3
+                });
+                const body = new THREE.Mesh(bodyGeo, bodyMat);
+                body.position.y = config.size * 0.6;
+                group.add(body);
+
+                // Crown spikes
+                const crownMat = new THREE.MeshStandardMaterial({ color: 0xf1c40f, metalness: 0.9 });
+                for (let i = -1; i <= 1; i++) {
+                    const spikeGeo = new THREE.ConeGeometry(config.size * 0.1, config.size * 0.3, 4);
+                    const spike = new THREE.Mesh(spikeGeo, crownMat);
+                    spike.position.set(i * config.size * 0.2, config.size * 1.1, 0);
+                    group.add(spike);
+                }
+
+            } else if (unit.type === 'turret') {
+                // Turret: Base + dome + barrels - Color based on team
+                const turretColor = isPlayer ? 0x3498db : 0xe74c3c; // Blue for player, Red for enemy
+                const turretEmissive = isPlayer ? 0x2980b9 : 0xc0392b;
+                const baseMat = new THREE.MeshStandardMaterial({
+                    color: turretColor,
+                    emissive: turretEmissive,
+                    emissiveIntensity: 0.3,
+                    metalness: 0.6
+                });
+
+                const baseGeo = new THREE.CylinderGeometry(config.size * 0.5, config.size * 0.6, config.size * 0.4, 8);
+                const base = new THREE.Mesh(baseGeo, baseMat);
+                base.position.y = config.size * 0.2;
+                group.add(base);
+
+                const topGeo = new THREE.SphereGeometry(config.size * 0.4, 12, 8);
+                const top = new THREE.Mesh(topGeo, baseMat);
+                top.position.y = config.size * 0.6;
+                group.add(top);
+
+                const barrelGeo = new THREE.CylinderGeometry(config.size * 0.08, config.size * 0.08, config.size * 0.6, 6);
+                const barrelMat = new THREE.MeshStandardMaterial({ color: 0x2c3e50, metalness: 0.8 });
+                const barrel1 = new THREE.Mesh(barrelGeo, barrelMat);
+                barrel1.rotation.x = Math.PI / 2;
+                barrel1.position.set(-config.size * 0.15, config.size * 0.6, config.size * 0.5);
+                const barrel2 = new THREE.Mesh(barrelGeo, barrelMat);
+                barrel2.rotation.x = Math.PI / 2;
+                barrel2.position.set(config.size * 0.15, config.size * 0.6, config.size * 0.5);
+                group.add(barrel1, barrel2);
+
+                // Range ring - also team colored
+                const ringGeo = new THREE.RingGeometry(GAME_CONFIG.UNITS.turret.area * GAME_CONFIG.CELL_SIZE - 0.1,
+                    GAME_CONFIG.UNITS.turret.area * GAME_CONFIG.CELL_SIZE, 32);
+                const ringMat = new THREE.MeshBasicMaterial({
+                    color: turretColor,
+                    transparent: true,
+                    opacity: 0.2,
+                    side: THREE.DoubleSide
+                });
+                const ring = new THREE.Mesh(ringGeo, ringMat);
+                ring.rotation.x = -Math.PI / 2;
+                ring.position.y = 0.05;
+                group.add(ring);
+
+                // Rotate turret to face enemy (player turrets face negative Z / low Y)
+                group.rotation.y = isPlayer ? Math.PI : 0;
+
+            } else if (unit.type === 'boss') {
+                // Boss: Large intimidating creature
+                const bossColor = isPlayer ? 0x8e44ad : 0xc0392b;
+                const bodyMat = new THREE.MeshStandardMaterial({
+                    color: bossColor,
+                    emissive: bossColor,
+                    emissiveIntensity: 0.4
+                });
+
+                const bodyGeo = new THREE.BoxGeometry(config.size, config.size * 1.2, config.size * 0.8);
+                const body = new THREE.Mesh(bodyGeo, bodyMat);
+                body.position.y = config.size * 0.7;
+                group.add(body);
+
+                const headGeo = new THREE.BoxGeometry(config.size * 0.6, config.size * 0.5, config.size * 0.5);
+                const head = new THREE.Mesh(headGeo, bodyMat);
+                head.position.y = config.size * 1.5;
+                group.add(head);
+
+                // Horns
+                const hornGeo = new THREE.ConeGeometry(config.size * 0.15, config.size * 0.5, 6);
+                const hornMat = new THREE.MeshStandardMaterial({ color: 0x2c3e50 });
+                const leftHorn = new THREE.Mesh(hornGeo, hornMat);
+                leftHorn.position.set(-config.size * 0.25, config.size * 1.9, 0);
+                leftHorn.rotation.z = Math.PI * 0.15;
+                const rightHorn = new THREE.Mesh(hornGeo, hornMat);
+                rightHorn.position.set(config.size * 0.25, config.size * 1.9, 0);
+                rightHorn.rotation.z = -Math.PI * 0.15;
+                group.add(leftHorn, rightHorn);
+
+                // Glowing eyes
+                const eyeGeo = new THREE.SphereGeometry(config.size * 0.12, 8, 8);
+                const eyeMat = new THREE.MeshBasicMaterial({ color: isPlayer ? 0x9b59b6 : 0xe74c3c });
+                const leftEye = new THREE.Mesh(eyeGeo, eyeMat);
+                leftEye.position.set(-config.size * 0.15, config.size * 1.55, config.size * 0.25);
+                const rightEye = new THREE.Mesh(eyeGeo, eyeMat);
+                rightEye.position.set(config.size * 0.15, config.size * 1.55, config.size * 0.25);
+                group.add(leftEye, rightEye);
+
+                // Arms
+                const armGeo = new THREE.BoxGeometry(config.size * 0.3, config.size * 0.8, config.size * 0.3);
+                const leftArm = new THREE.Mesh(armGeo, bodyMat);
+                leftArm.position.set(-config.size * 0.65, config.size * 0.6, 0);
+                const rightArm = new THREE.Mesh(armGeo, bodyMat);
+                rightArm.position.set(config.size * 0.65, config.size * 0.6, 0);
+                group.add(leftArm, rightArm);
+            }
+
+            // Add health bar above unit
+            const healthBarHeights = { soldier: 1.8, hero: 3.5, turret: 1.5, boss: 12.0 };
+            const healthBarWidths = { soldier: 1.2, hero: 2.0, turret: 2.0, boss: 5.0 };
+            const healthBar = createHealthBar(healthBarWidths[unit.type], 0.2);
+            healthBar.position.y = healthBarHeights[unit.type];
+            group.add(healthBar);
+
+            group.userData = { type: unit.type, team: unit.team, createTime: Date.now(), maxHp: config.hp };
+            return group;
+        }
+
+        function updateUnitsVisual() {
+            const currentTime = Date.now();
 
             Object.keys(unitMeshes).forEach(id => {
-                if (!allUnits.find(u => u.id === id)) {
+                const found = [...gameState.units.player, ...gameState.units.enemy, gameState.boss.player, gameState.boss.enemy]
+                    .filter(u => u).find(u => u.id === id);
+                if (!found) {
                     scene.remove(unitMeshes[id]);
                     delete unitMeshes[id];
                 }
             });
 
+            const allUnits = [...gameState.units.player, ...gameState.units.enemy];
+            if (gameState.boss.player) allUnits.push(gameState.boss.player);
+            if (gameState.boss.enemy) allUnits.push(gameState.boss.enemy);
+
             allUnits.forEach(unit => {
-                if (unit.state === 'dead') return;
+                if (!unit || unit.state === 'dead') return;
 
                 if (!unitMeshes[unit.id]) {
-                    const color = unit.team === GAME_CONFIG.TEAM_BLUE ? 0x3498db : 0xe74c3c;
-                    const size = unit.size * 0.4;
-                    const geo = unit.type === 'turret' ?
-                        new THREE.CylinderGeometry(size, size * 1.2, size * 2, 8) :
-                        new THREE.SphereGeometry(size, 8, 8);
-                    const mat = new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 0.3 });
-                    const mesh = new THREE.Mesh(geo, mat);
+                    const mesh = createUnitMesh(unit);
                     unitMeshes[unit.id] = mesh;
                     scene.add(mesh);
                 }
@@ -339,98 +1065,425 @@
                 const mesh = unitMeshes[unit.id];
                 mesh.position.set(
                     (unit.x - GAME_CONFIG.GRID_WIDTH / 2 + 0.5) * GAME_CONFIG.CELL_SIZE,
-                    unit.size * 0.3,
+                    0,
                     (unit.y - GAME_CONFIG.GRID_HEIGHT / 2 + 0.5) * GAME_CONFIG.CELL_SIZE
                 );
+
+                // Update health bar
+                const healthBar = mesh.getObjectByName('healthBar');
+                if (healthBar && mesh.userData.maxHp) {
+                    updateHealthBar(healthBar, unit.hp, mesh.userData.maxHp);
+                }
+
+                // Animations
+                const elapsed = (currentTime - mesh.userData.createTime) / 1000;
+
+                if (unit.type === 'soldier') {
+                    mesh.children[0].position.y = GAME_CONFIG.UNITS.soldier.size * 0.5 + Math.sin(elapsed * 5) * 0.1;
+                    // Face movement direction
+                    mesh.rotation.y = unit.team === GAME_CONFIG.TEAM_PLAYER ? Math.PI : 0;
+                } else if (unit.type === 'hero') {
+                    mesh.children[0].position.y = GAME_CONFIG.UNITS.hero.size * 0.6 + Math.sin(elapsed * 3) * 0.15;
+                    // Face movement direction
+                    const baseRot = unit.team === GAME_CONFIG.TEAM_PLAYER ? Math.PI : 0;
+                    mesh.rotation.y = baseRot;
+                } else if (unit.type === 'turret') {
+                    // Rotate turret using actual scanAngle from game state
+                    if (mesh.children[1]) {
+                        const scanAngle = unit.scanAngle !== undefined ? unit.scanAngle : 0;
+                        mesh.children[1].rotation.y = scanAngle;
+                    }
+                    if (mesh.children[5]) mesh.children[5].material.opacity = 0.15 + Math.sin(elapsed * 3) * 0.1;
+                } else if (unit.type === 'boss') {
+                    mesh.rotation.y = Math.sin(elapsed) * 0.05;
+                    if (mesh.children[5]) mesh.children[5].rotation.x = Math.sin(elapsed * 2) * 0.2;
+                    if (mesh.children[6]) mesh.children[6].rotation.x = -Math.sin(elapsed * 2) * 0.2;
+                }
+
+                if (unit.state === 'fighting') {
+                    mesh.position.x += Math.sin(elapsed * 30) * 0.05;
+                }
             });
         }
 
-        function updateHUD() {
-            document.getElementById('blueTiles').textContent = gameState.stats?.blueTiles || 0;
-            document.getElementById('redTiles').textContent = gameState.stats?.redTiles || 0;
-            document.getElementById('blueKills').textContent = gameState.stats?.blueKills || 0;
-            document.getElementById('redKills').textContent = gameState.stats?.redKills || 0;
+        function updateProjectilesVisual() {
+            // Remove old projectiles
+            Object.keys(projectileMeshes).forEach(id => {
+                const found = gameState.projectiles && gameState.projectiles.find(p => p.id === id);
+                if (!found) {
+                    scene.remove(projectileMeshes[id]);
+                    delete projectileMeshes[id];
+                }
+            });
 
-            const total = (gameState.stats?.blueTiles || 0) + (gameState.stats?.redTiles || 0) || 1;
-            const bluePercent = Math.round((gameState.stats?.blueTiles || 0) / total * 100);
+            // Create/update projectile meshes
+            if (!gameState.projectiles) return;
 
-            document.getElementById('blueTerritory').style.width = bluePercent + '%';
-            document.getElementById('redTerritory').style.width = (100 - bluePercent) + '%';
+            gameState.projectiles.forEach(proj => {
+                if (!proj.alive) return;
 
-            const mins = Math.floor((gameState.timeRemaining || 300) / 60);
-            const secs = Math.floor((gameState.timeRemaining || 300) % 60);
-            document.getElementById('timer').textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
+                // Create mesh if needed
+                if (!projectileMeshes[proj.id]) {
+                    const isPlayer = proj.team === GAME_CONFIG.TEAM_PLAYER;
+                    const color = isPlayer ? 0x1abc9c : 0xe74c3c;
+
+                    const group = new THREE.Group();
+
+                    // Glowing projectile ball
+                    const ballGeo = new THREE.SphereGeometry(0.4, 8, 8);
+                    const ballMat = new THREE.MeshBasicMaterial({
+                        color: color,
+                        transparent: true,
+                        opacity: 0.9
+                    });
+                    const ball = new THREE.Mesh(ballGeo, ballMat);
+                    group.add(ball);
+
+                    // Glow effect
+                    const glowGeo = new THREE.SphereGeometry(0.6, 8, 8);
+                    const glowMat = new THREE.MeshBasicMaterial({
+                        color: color,
+                        transparent: true,
+                        opacity: 0.3
+                    });
+                    const glow = new THREE.Mesh(glowGeo, glowMat);
+                    group.add(glow);
+
+                    // Trail
+                    const trailGeo = new THREE.CylinderGeometry(0.15, 0.05, 1.5, 6);
+                    const trailMat = new THREE.MeshBasicMaterial({
+                        color: color,
+                        transparent: true,
+                        opacity: 0.5
+                    });
+                    const trail = new THREE.Mesh(trailGeo, trailMat);
+                    trail.rotation.x = Math.PI / 2;
+                    trail.position.z = -0.8;
+                    group.add(trail);
+
+                    projectileMeshes[proj.id] = group;
+                    scene.add(group);
+                }
+
+                const mesh = projectileMeshes[proj.id];
+
+                // Position
+                mesh.position.set(
+                    (proj.x - GAME_CONFIG.GRID_WIDTH / 2 + 0.5) * GAME_CONFIG.CELL_SIZE,
+                    1.5, // Elevated above ground
+                    (proj.y - GAME_CONFIG.GRID_HEIGHT / 2 + 0.5) * GAME_CONFIG.CELL_SIZE
+                );
+
+                // Rotate toward target
+                const dx = proj.targetX - proj.x;
+                const dy = proj.targetY - proj.y;
+                mesh.rotation.y = Math.atan2(dx, dy);
+
+                // Pulsing glow effect
+                const t = Date.now() * 0.01;
+                mesh.children[1].scale.setScalar(1 + Math.sin(t) * 0.2);
+            });
         }
 
-        // ==================== CLICK TO USE SKILL ====================
-        document.getElementById('gameCanvas').addEventListener('click', (e) => {
-            if (!selectedSkill || !gameState.gameStarted) return;
+        function setCameraAngle(angle) {
+            currentCameraAngle = angle;
 
-            const rect = e.target.getBoundingClientRect();
-            const mouseX = ((e.clientX - rect.left) / rect.width) * 2 - 1;
-            const mouseY = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+            // Update button states
+            document.querySelectorAll('.cam-btn').forEach((btn, i) => {
+                btn.classList.toggle('active', i === angle);
+            });
 
-            const raycaster = new THREE.Raycaster();
-            raycaster.setFromCamera(new THREE.Vector2(mouseX, mouseY), camera);
+            if (angle === 0) {
+                // Pure top-down
+                camera.position.set(0, 50, 0);
+                camera.up.set(0, 0, -1);
+                camera.lookAt(0, 0, 0);
+            } else if (angle === 1) {
+                // 2.5D isometric
+                camera.position.set(0, 40, 30);
+                camera.up.set(0, 1, 0);
+                camera.lookAt(0, 0, 0);
+            } else if (angle === 2) {
+                // High angle view
+                camera.position.set(0, 35, 40);
+                camera.up.set(0, 1, 0);
+                camera.lookAt(0, 0, -10);
+            }
 
-            const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
-            const intersection = new THREE.Vector3();
-            raycaster.ray.intersectPlane(plane, intersection);
+            camera.updateProjectionMatrix();
+        }
 
-            const gridX = intersection.x / GAME_CONFIG.CELL_SIZE + GAME_CONFIG.GRID_WIDTH / 2;
-            const gridY = intersection.z / GAME_CONFIG.CELL_SIZE + GAME_CONFIG.GRID_HEIGHT / 2;
+        // ==================== SKILLS ====================
+        function selectSkill(skill) {
+            const skills = gameState.players.commander.skills;
 
-            if (gridX >= 0 && gridX < GAME_CONFIG.GRID_WIDTH && gridY >= 0 && gridY < GAME_CONFIG.GRID_HEIGHT) {
-                broadcast({
-                    type: 'skill',
-                    skill: selectedSkill,
-                    team: myTeam,
-                    x: gridX,
-                    y: gridY
-                });
+            if (skill === 'boss') {
+                if (!skills.boss.ready) return;
+                // Boss doesn't need targeting
+                // Blue uses player boss, Red uses enemy boss
+                const success = MY_TEAM === 'blue'
+                    ? useSkillBoss(gameState)
+                    : useSkillBossEnemy(gameState);
+                if (success) {
+                    broadcast({ type: 'skill', skill: 'boss', team: MY_TEAM });
+                }
+                return;
+            }
 
-                // Deselect skill
-                document.querySelectorAll('.skill-btn').forEach(btn => btn.classList.remove('active'));
+            if (!skills[skill].ready) return;
+
+            selectedSkill = skill;
+            document.querySelectorAll('.skill-btn').forEach(el => el.classList.remove('active'));
+            document.querySelector(`[data-skill="${skill}"]`).classList.add('active');
+            document.getElementById('selectedSkill').classList.remove('hidden');
+            document.getElementById('selectedSkill').textContent = `Click to deploy ${skill.toUpperCase()}`;
+        }
+
+        function useSelectedSkill(x, y) {
+            if (!selectedSkill) return;
+
+            let success = false;
+            // Blue commander uses player skills, Red commander uses enemy skills
+            if (MY_TEAM === 'blue') {
+                switch (selectedSkill) {
+                    case 'hero':
+                        success = useSkillHero(gameState, x, y);
+                        break;
+                    case 'turret':
+                        success = useSkillTurret(gameState, x, y);
+                        break;
+                    case 'meteor':
+                        success = useSkillMeteor(gameState, x, y);
+                        break;
+                }
+            } else {
+                // Red team uses enemy skills
+                switch (selectedSkill) {
+                    case 'hero':
+                        success = useSkillHeroEnemy(gameState, x, y);
+                        break;
+                    case 'turret':
+                        success = useSkillTurretEnemy(gameState, x, y);
+                        break;
+                    case 'meteor':
+                        success = useSkillMeteorEnemy(gameState, x, y);
+                        break;
+                }
+            }
+
+            if (success) {
+                broadcast({ type: 'skill', skill: selectedSkill, x: x, y: y, team: MY_TEAM });
                 selectedSkill = null;
+                document.querySelectorAll('.skill-btn').forEach(el => el.classList.remove('active'));
+                document.getElementById('selectedSkill').classList.add('hidden');
+            }
+        }
+
+        // ==================== INPUT ====================
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Digit1') selectSkill('hero');
+            if (e.code === 'Digit2') selectSkill('turret');
+            if (e.code === 'Digit3') selectSkill('meteor');
+            if (e.code === 'Digit4') selectSkill('boss');
+            if (e.code === 'Escape') {
+                selectedSkill = null;
+                document.querySelectorAll('.skill-btn').forEach(el => el.classList.remove('active'));
+                document.getElementById('selectedSkill').classList.add('hidden');
             }
         });
 
-        // ==================== GAME LOOP ====================
-        function startGame() {
-            document.getElementById('waitingOverlay').classList.add('hidden');
-            initThreeJS();
-            requestAnimationFrame(gameLoop);
-        }
+        document.addEventListener('mousemove', (e) => {
+            mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
 
-        function gameLoop() {
-            if (gameState.gameEnded) return;
+            if (selectedSkill) {
+                raycaster.setFromCamera(mouse, camera);
+                const hits = raycaster.intersectObjects(gridMeshes.flat());
+                if (hits.length > 0) {
+                    const hit = hits[0];
+                    targetMarker.position.x = hit.object.position.x;
+                    targetMarker.position.z = hit.object.position.z;
+                    targetMarker.visible = true;
+                }
+            } else {
+                targetMarker.visible = false;
+            }
+        });
 
-            updateVisuals();
-            renderer.render(scene, camera);
-            requestAnimationFrame(gameLoop);
+        document.addEventListener('click', (e) => {
+            if (!selectedSkill) return;
+
+            raycaster.setFromCamera(mouse, camera);
+            const hits = raycaster.intersectObjects(gridMeshes.flat());
+
+            if (hits.length > 0) {
+                const { gridX, gridY } = hits[0].object.userData;
+                useSelectedSkill(gridX, gridY);
+            }
+        });
+
+        // ==================== UI ====================
+        function updateUI() {
+            // Timer
+            const minutes = Math.floor(gameState.timeRemaining / 60);
+            const seconds = Math.floor(gameState.timeRemaining % 60);
+            const timerEl = document.getElementById('timer');
+            timerEl.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+            timerEl.className = gameState.timeRemaining < 60 ? 'warning' : '';
+
+            // Stats - show from my team's perspective
+            const myKillsStat = MY_TEAM === 'blue' ? gameState.stats.playerKills : (gameState.stats.enemyKills || 0);
+            const myUnits = MY_TEAM === 'blue' ? gameState.units.player : gameState.units.enemy;
+            document.getElementById('killCount').textContent = myKillsStat;
+            document.getElementById('unitCount').textContent = myUnits.length;
+
+            // Skills cooldowns
+            const skills = gameState.players.commander.skills;
+
+            ['hero', 'turret', 'meteor'].forEach(skill => {
+                const cdEl = document.getElementById(skill + 'Cd');
+                const btnEl = document.querySelector(`[data-skill="${skill}"]`);
+                if (!skills[skill].ready) {
+                    cdEl.classList.remove('hidden');
+                    cdEl.textContent = Math.ceil(skills[skill].cooldown);
+                    btnEl.classList.add('disabled');
+                } else {
+                    cdEl.classList.add('hidden');
+                    btnEl.classList.remove('disabled');
+                }
+            });
+
+            // Boss skill - check correct boss based on team
+            const bossBtn = document.querySelector('[data-skill="boss"]');
+            const bossCd = document.getElementById('bossCd');
+            const myBoss = MY_TEAM === 'blue' ? gameState.boss.player : gameState.boss.enemy;
+            if (skills.boss.ready && !myBoss) {
+                bossBtn.classList.remove('locked');
+                bossCd.classList.add('hidden');
+            } else {
+                bossBtn.classList.add('locked');
+                bossCd.classList.remove('hidden');
+                bossCd.textContent = myBoss ? '✓' : '🔒';
+            }
+
+            // Ultimate gauge
+            const gauge = gameState.players.commander.ultimateGauge;
+            document.getElementById('ultimateFill').style.width = gauge + '%';
+            document.getElementById('ultimatePercent').textContent = Math.floor(gauge) + '%';
+
+            // Territory - show from my team's perspective
+            const total = GAME_CONFIG.GRID_WIDTH * GAME_CONFIG.GRID_HEIGHT;
+            const myTiles = MY_TEAM === 'blue' ? gameState.stats.playerTiles : gameState.stats.enemyTiles;
+            const theirTiles = MY_TEAM === 'blue' ? gameState.stats.enemyTiles : gameState.stats.playerTiles;
+            const myPct = Math.round(myTiles / total * 100);
+            const theirPct = Math.round(theirTiles / total * 100);
+            document.getElementById('playerTerritory').style.width = myPct + '%';
+            document.getElementById('playerTerritory').textContent = myPct + '%';
+            document.getElementById('enemyTerritory').style.width = theirPct + '%';
+            document.getElementById('enemyTerritory').textContent = theirPct + '%';
         }
 
         function showGameOver() {
-            const blueWins = (gameState.stats?.blueTiles || 0) > (gameState.stats?.redTiles || 0);
-            document.getElementById('winnerText').textContent = blueWins ? '🔵 BLUE WINS!' : '🔴 RED WINS!';
-            document.getElementById('winnerText').style.color = blueWins ? '#3498db' : '#e74c3c';
-            document.getElementById('gameOverlay').classList.remove('hidden');
+            // Check winner based on team
+            const myTiles = MY_TEAM === 'blue' ? gameState.stats.playerTiles : gameState.stats.enemyTiles;
+            const enemyTiles = MY_TEAM === 'blue' ? gameState.stats.enemyTiles : gameState.stats.playerTiles;
+            const myKills = MY_TEAM === 'blue' ? gameState.stats.playerKills : (gameState.stats.enemyKills || 0);
+            const won = myTiles > enemyTiles;
+            document.getElementById('resultTitle').textContent = won ? 'VICTORY!' : 'DEFEAT';
+            document.getElementById('resultTitle').style.color = won ? '#2ecc71' : '#e74c3c';
+            const total = GAME_CONFIG.GRID_WIDTH * GAME_CONFIG.GRID_HEIGHT;
+            const pct = Math.round(myTiles / total * 100);
+            document.getElementById('resultText').textContent = `Your team controls ${pct}% of the field!`;
+            document.getElementById('resultStats').textContent = `Team kills: ${myKills} | Territory: ${myTiles} tiles`;
+            document.getElementById('gameOver').classList.remove('hidden');
+        }
+
+        // ==================== GAME LOOP ====================
+        let lastTime = 0;
+        let spawnTimer = 0;
+
+        function animate(currentTime = 0) {
+            requestAnimationFrame(animate);
+
+            const deltaTime = Math.min((currentTime - lastTime) / 1000, 0.1);
+            lastTime = currentTime;
+
+            // Only run game logic after game starts
+            if (gameState.gameStarted && !gameState.gameEnded) {
+                // Only run game logic if NOT connected to host
+                // Host (vanguard) is authoritative
+                if (!isConnectedToHost) {
+                    updateGame(gameState, deltaTime);
+
+                    spawnTimer += deltaTime;
+                    if (spawnTimer >= GAME_CONFIG.MINION_SPAWN_INTERVAL) {
+                        spawnTimer = 0;
+                        spawnPlayerMinions(gameState);
+                        spawnEnemyMinions(gameState);
+                    }
+
+                    updateAI(gameState, deltaTime);
+                } else {
+                    // Still update local skill cooldowns
+                    Object.keys(gameState.players.commander.skills).forEach(skill => {
+                        const s = gameState.players.commander.skills[skill];
+                        if (!s.ready && s.cooldown > 0) {
+                            s.cooldown -= deltaTime;
+                            if (s.cooldown <= 0) {
+                                s.cooldown = 0;
+                                if (skill !== 'boss') s.ready = true;
+                            }
+                        }
+                    });
+
+                    // Check ultimate gauge from synced stats - based on team
+                    const myKills = MY_TEAM === 'blue' ? gameState.stats.playerKills : gameState.stats.enemyKills || 0;
+                    const myTiles = MY_TEAM === 'blue' ? gameState.stats.playerTiles : gameState.stats.enemyTiles;
+                    const gauge = myKills + (myTiles / 7);
+                    gameState.players.commander.ultimateGauge = Math.min(100, gauge);
+                    const myBoss = MY_TEAM === 'blue' ? gameState.boss.player : gameState.boss.enemy;
+                    if (gameState.players.commander.ultimateGauge >= 100 && !myBoss) {
+                        gameState.players.commander.skills.boss.ready = true;
+                    }
+                }
+
+                updateGrid();
+                updateUnitsVisual();
+                updateProjectilesVisual();
+                updateUI();
+            } else if (gameState.gameEnded) {
+                showGameOver();
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        // ==================== RESIZE ====================
+        window.addEventListener('resize', () => {
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            const aspect = window.innerWidth / window.innerHeight;
+            const viewHeight = GAME_CONFIG.GRID_HEIGHT * GAME_CONFIG.CELL_SIZE / 2 + 5;
+            const viewWidth = viewHeight * aspect;
+            camera.left = -viewWidth;
+            camera.right = viewWidth;
+            camera.top = viewHeight;
+            camera.bottom = -viewHeight;
+            camera.updateProjectionMatrix();
+        });
+
+        // ==================== MOBILE CHECK ====================
+        function isMobile() {
+            return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+                || (navigator.maxTouchPoints && navigator.maxTouchPoints > 2);
         }
 
         // ==================== INIT ====================
-        window.addEventListener('resize', () => {
-            if (renderer && camera) {
-                renderer.setSize(window.innerWidth, window.innerHeight);
-                const aspect = window.innerWidth / window.innerHeight;
-                const viewHeight = GAME_CONFIG.GRID_HEIGHT * GAME_CONFIG.CELL_SIZE / 2 + 5;
-                const viewWidth = viewHeight * aspect;
-                camera.left = -viewWidth;
-                camera.right = viewWidth;
-                camera.updateProjectionMatrix();
-            }
-        });
-
-        initPeer();
+        if (isMobile()) {
+            document.getElementById('mobileBlock').classList.remove('hidden');
+        } else {
+            initThreeJS();
+            initNetworking();
+        }
     </script>
 </body>
 </html>
