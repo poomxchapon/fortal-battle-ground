@@ -384,9 +384,12 @@
         }
 
         function updateGrid() {
+            if (!gameState.grid || !gameState.grid.length) return;
+
             for (let y = 0; y < GAME_CONFIG.GRID_HEIGHT; y++) {
+                if (!gameState.grid[y]) continue;
                 for (let x = 0; x < GAME_CONFIG.GRID_WIDTH; x++) {
-                    const state = gameState.grid[y][x];
+                    const state = gameState.grid[y][x] || 0;
                     const cell = gridMeshes[y][x];
                     if (state === GAME_CONFIG.TEAM_BLUE) {
                         cell.material.color.setHex(GAME_CONFIG.COLOR_BLUE);
@@ -500,40 +503,58 @@
         let syncTimer = 0;
 
         function startGame() {
+            console.log('Starting game...');
             document.getElementById('waitingOverlay').classList.add('hidden');
             gameState.gameStarted = true;
-            initThreeJS();
-            requestAnimationFrame(gameLoop);
+
+            // Make sure grid is initialized
+            if (!gameState.grid || gameState.grid.length === 0) {
+                console.log('Initializing grid...');
+                initGrid(gameState);
+            }
+
+            try {
+                initThreeJS();
+                console.log('ThreeJS initialized');
+                requestAnimationFrame(gameLoop);
+            } catch (e) {
+                console.error('Error starting game:', e);
+                alert('Error starting game: ' + e.message);
+            }
         }
 
         function gameLoop(currentTime) {
-            const deltaTime = Math.min((currentTime - lastTime) / 1000, 0.1);
-            lastTime = currentTime;
+            try {
+                const deltaTime = Math.min((currentTime - lastTime) / 1000, 0.1);
+                lastTime = currentTime;
 
-            if (!gameState.gameEnded) {
-                handleMovement(deltaTime);
-                updateGame(gameState, deltaTime);
+                if (!gameState.gameEnded) {
+                    handleMovement(deltaTime);
+                    updateGame(gameState, deltaTime);
 
-                // Sync to other players (host only)
-                if (myTeam === 'blue') {
-                    syncTimer += deltaTime;
-                    if (syncTimer >= 0.05) { // 20 Hz sync
-                        syncTimer = 0;
-                        broadcast({ type: 'sync', state: gameState });
+                    // Sync to other players (host only)
+                    if (myTeam === 'blue') {
+                        syncTimer += deltaTime;
+                        if (syncTimer >= 0.05) { // 20 Hz sync
+                            syncTimer = 0;
+                            broadcast({ type: 'sync', state: gameState });
+                        }
                     }
+
+                    updateGrid();
+                    updatePlayers();
+                    updateUnits();
+                    updateHUD();
+                    renderer.render(scene, camera);
+
+                    if (gameState.gameEnded) {
+                        showGameOver();
+                    }
+
+                    requestAnimationFrame(gameLoop);
                 }
-
-                updateGrid();
-                updatePlayers();
-                updateUnits();
-                updateHUD();
-                renderer.render(scene, camera);
-
-                if (gameState.gameEnded) {
-                    showGameOver();
-                }
-
-                requestAnimationFrame(gameLoop);
+            } catch (e) {
+                console.error('Game loop error:', e);
             }
         }
 
