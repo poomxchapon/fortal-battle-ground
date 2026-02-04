@@ -183,7 +183,7 @@
     <!-- HUD -->
     <div id="hud">
         <div class="hud-section">
-            <div class="role-badge">Vanguard <span style="opacity:0.6;font-size:0.7em">v1.1.0</span></div>
+            <div class="role-badge">Vanguard <span style="opacity:0.6;font-size:0.7em">v1.2.0</span></div>
             <div class="stat-box">
                 <div class="stat-label">Room</div>
                 <div class="stat-value" id="roomDisplay">---</div>
@@ -354,21 +354,39 @@
         let connections = {};
 
         function initNetworking() {
-            // Prefix with 'fbg-' to ensure valid peer ID
+            // Prefix with 'fbg-' + timestamp to ensure unique peer ID
             const peerId = `fbg-${ROOM_ID}-${MY_ROLE}`;
-            peer = new Peer(peerId);
+            console.log('Creating peer with ID:', peerId);
+
+            peer = new Peer(peerId, {
+                debug: 2 // Show warnings and errors
+            });
 
             peer.on('open', (id) => {
-                console.log('Host ready:', id);
+                console.log('✅ Host ready:', id);
                 document.getElementById('roomDisplay').textContent = ROOM_ID;
                 document.getElementById('waitingRoomId').textContent = ROOM_ID;
+                document.getElementById('waitingMsg').innerHTML = `Room <b>${ROOM_ID}</b> ready! Share this code with other players.`;
                 updateWaitingRoom();
             });
 
-            peer.on('connection', (conn) => handleConnection(conn));
+            peer.on('connection', (conn) => {
+                console.log('📥 Incoming connection from:', conn.peer);
+                handleConnection(conn);
+            });
+
             peer.on('error', (err) => {
-                console.error('Peer error:', err);
-                alert('Connection error: ' + err.type);
+                console.error('❌ Peer error:', err);
+                if (err.type === 'unavailable-id') {
+                    document.getElementById('waitingMsg').innerHTML = `⚠️ Room ${ROOM_ID} already exists! <button onclick="location.reload()">Try New Room</button>`;
+                } else {
+                    document.getElementById('waitingMsg').innerHTML = `⚠️ Error: ${err.type} <button onclick="location.reload()">Retry</button>`;
+                }
+            });
+
+            peer.on('disconnected', () => {
+                console.log('⚠️ Disconnected from server, reconnecting...');
+                peer.reconnect();
             });
         }
 
