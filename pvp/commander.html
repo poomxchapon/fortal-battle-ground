@@ -1357,13 +1357,21 @@
             const bossBtn = document.querySelector('[data-skill="boss"]');
             const bossCd = document.getElementById('bossCd');
             const myBoss = MY_TEAM === 'blue' ? gameState.boss.player : gameState.boss.enemy;
+            const bossCooldown = skills.boss.cooldown;
             if (skills.boss.ready && !myBoss) {
                 bossBtn.classList.remove('locked');
                 bossCd.classList.add('hidden');
             } else {
                 bossBtn.classList.add('locked');
                 bossCd.classList.remove('hidden');
-                bossCd.textContent = myBoss ? '✓' : '🔒';
+                // Show cooldown timer, existing boss, or locked
+                if (myBoss) {
+                    bossCd.textContent = '✓';
+                } else if (bossCooldown > 0) {
+                    bossCd.textContent = Math.ceil(bossCooldown) + 's';
+                } else {
+                    bossCd.textContent = '🔒';
+                }
             }
 
             // Ultimate gauge

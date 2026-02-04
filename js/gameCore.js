@@ -32,12 +32,13 @@ const GAME_CONFIG = {
     SKILL_HERO_CD: 10,
     SKILL_TURRET_CD: 20,
     SKILL_METEOR_CD: 30,
+    SKILL_BOSS_CD: 60, // Boss respawn cooldown after death
 
     // Unit stats (size in world units, CELL_SIZE = 1.5)
     UNITS: {
         soldier: { hp: 100, atk: [8, 11], speed: 2, size: 1.5, color: 0x95a5a6 },      // 1x1 cell
         hero: { hp: 200, atk: [18, 22], speed: 1.5, size: 3.0, color: 0xf1c40f },      // 2x2 cells
-        turret: { hp: 500, atk: [58, 64], speed: 0, size: 3.0, area: 5, color: 0x1abc9c }, // 2x2 cells
+        turret: { hp: 1200, atk: [58, 64], speed: 0, size: 3.0, area: 5, color: 0x1abc9c }, // 2x2 cells - tanky!
         boss: { hp: 5000, atk: [98, 103], speed: 0.3, size: 7.5, color: 0x8e44ad }    // 5x5 cells
     }
 };
@@ -477,7 +478,12 @@ const updateGame = (state, deltaTime) => {
     // Check ultimate gauge for boss
     const gauge = state.stats.playerKills + (state.stats.playerTiles / 7);
     state.players.commander.ultimateGauge = Math.min(100, gauge);
-    if (state.players.commander.ultimateGauge >= 100 && !state.boss.player) {
+    // Boss respawn cooldown
+    if (state.players.commander.skills.boss.cooldown > 0) {
+        state.players.commander.skills.boss.cooldown -= deltaTime;
+    }
+    // Boss ready when gauge full, no existing boss, and cooldown done
+    if (state.players.commander.ultimateGauge >= 100 && !state.boss.player && state.players.commander.skills.boss.cooldown <= 0) {
         state.players.commander.skills.boss.ready = true;
     }
 
@@ -556,12 +562,16 @@ const updateMinion = (unit, enemies, state, deltaTime, team) => {
                     if (target === state.boss.enemy) {
                         state.boss.enemy = null;
                         state.stats.playerKills += 49; // Bonus for boss kill
+                        // Set boss respawn cooldown for red team
+                        state.players.commander.skills.boss.cooldown = GAME_CONFIG.SKILL_BOSS_CD;
                     }
                 } else {
                     state.stats.enemyKills++;
                     if (target === state.boss.player) {
                         state.boss.player = null;
                         state.stats.enemyKills += 49;
+                        // Set boss respawn cooldown for blue team
+                        state.players.commander.skills.boss.cooldown = GAME_CONFIG.SKILL_BOSS_CD;
                     }
                 }
             }
@@ -731,10 +741,12 @@ const updateBoss = (state, deltaTime) => {
             if (enemyBoss.hp <= 0) {
                 state.boss.enemy = null;
                 state.stats.playerKills += 50; // Big kill bonus
+                state.players.commander.skills.boss.cooldown = GAME_CONFIG.SKILL_BOSS_CD;
             }
             if (playerBoss.hp <= 0) {
                 state.boss.player = null;
                 state.stats.enemyKills += 50;
+                state.players.commander.skills.boss.cooldown = GAME_CONFIG.SKILL_BOSS_CD;
             }
 
             // Paint battle area
@@ -795,6 +807,7 @@ const updateBoss = (state, deltaTime) => {
                 }
             }
             state.boss.player = null;
+            state.players.commander.skills.boss.cooldown = GAME_CONFIG.SKILL_BOSS_CD;
         }
     }
 
@@ -830,6 +843,7 @@ const updateBoss = (state, deltaTime) => {
                 }
             }
             state.boss.enemy = null;
+            state.players.commander.skills.boss.cooldown = GAME_CONFIG.SKILL_BOSS_CD;
         }
     }
 };
