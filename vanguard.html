@@ -228,16 +228,20 @@
         let connections = {};
 
         function initNetworking() {
-            const peerId = `${ROOM_ID}-${MY_ROLE}`;
+            // Prefix with 'fbg-' to ensure valid peer ID
+            const peerId = `fbg-${ROOM_ID}-${MY_ROLE}`;
             peer = new Peer(peerId);
 
             peer.on('open', (id) => {
-                console.log('Connected as:', id);
-                document.getElementById('roomDisplay').textContent = ROOM_ID.split('-')[1] || ROOM_ID;
+                console.log('Host ready:', id);
+                document.getElementById('roomDisplay').textContent = ROOM_ID;
             });
 
             peer.on('connection', (conn) => handleConnection(conn));
-            peer.on('error', (err) => console.error('Peer error:', err));
+            peer.on('error', (err) => {
+                console.error('Peer error:', err);
+                alert('Connection error: ' + err.type);
+            });
         }
 
         function handleConnection(conn) {

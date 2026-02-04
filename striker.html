@@ -364,18 +364,42 @@
         let connections = {};
 
         function initNetworking() {
-            const peerId = `${ROOM_ID}-${MY_ROLE}`;
+            // Prefix with 'fbg-' to ensure valid peer ID
+            const peerId = `fbg-${ROOM_ID}-${MY_ROLE}`;
             peer = new Peer(peerId);
 
             peer.on('open', (id) => {
                 console.log('Connected as:', id);
-                document.getElementById('roomDisplay').textContent = ROOM_ID.split('-')[1] || ROOM_ID;
+                document.getElementById('roomDisplay').textContent = ROOM_ID;
+                updateConnectionStatus('Connecting to host...');
+
                 // Connect to vanguard (host)
-                const hostConn = peer.connect(`${ROOM_ID}-vanguard`);
+                const hostConn = peer.connect(`fbg-${ROOM_ID}-vanguard`);
                 if (hostConn) handleConnection(hostConn);
             });
 
             peer.on('connection', (conn) => handleConnection(conn));
+
+            peer.on('error', (err) => {
+                console.error('Peer error:', err);
+                if (err.type === 'peer-unavailable') {
+                    updateConnectionStatus('Host not found! Make sure Vanguard opens first.');
+                } else {
+                    updateConnectionStatus('Connection error: ' + err.type);
+                }
+            });
+        }
+
+        function updateConnectionStatus(msg) {
+            let statusEl = document.getElementById('connectionStatus');
+            if (!statusEl) {
+                statusEl = document.createElement('div');
+                statusEl.id = 'connectionStatus';
+                statusEl.style.cssText = 'position:fixed;bottom:100px;left:20px;background:rgba(0,0,0,0.8);padding:10px 15px;border-radius:10px;color:white;font-size:0.85em;z-index:100;';
+                document.body.appendChild(statusEl);
+            }
+            statusEl.textContent = msg;
+            statusEl.style.background = isConnectedToHost ? 'rgba(39,174,96,0.8)' : 'rgba(0,0,0,0.8)';
         }
 
         function handleConnection(conn) {
@@ -384,6 +408,16 @@
 
             conn.on('open', () => {
                 gameState.players[role].connected = true;
+                if (role === 'vanguard') {
+                    updateConnectionStatus('Connected to Host!');
+                }
+            });
+
+            conn.on('close', () => {
+                if (role === 'vanguard') {
+                    isConnectedToHost = false;
+                    updateConnectionStatus('Disconnected from host');
+                }
             });
 
             conn.on('data', (data) => {
