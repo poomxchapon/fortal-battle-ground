@@ -422,7 +422,18 @@ const updateMinion = (unit, enemies, state, deltaTime, team) => {
         return;
     }
 
-    const { target, distance } = findNearestEnemy(unit, enemies);
+    // Find nearest enemy (including boss)
+    let { target, distance } = findNearestEnemy(unit, enemies);
+
+    // Also check enemy boss as potential target
+    const enemyBoss = team === GAME_CONFIG.TEAM_PLAYER ? state.boss.enemy : state.boss.player;
+    if (enemyBoss && enemyBoss.hp > 0) {
+        const bossDist = Math.abs(unit.x - enemyBoss.x) + Math.abs(unit.y - enemyBoss.y);
+        if (bossDist < distance) {
+            target = enemyBoss;
+            distance = bossDist;
+        }
+    }
 
     if (target && distance < 1.5) {
         // Fight
@@ -432,8 +443,17 @@ const updateMinion = (unit, enemies, state, deltaTime, team) => {
             if (killed) {
                 if (team === GAME_CONFIG.TEAM_PLAYER) {
                     state.stats.playerKills++;
+                    // Check if killed boss
+                    if (target === state.boss.enemy) {
+                        state.boss.enemy = null;
+                        state.stats.playerKills += 49; // Bonus for boss kill
+                    }
                 } else {
                     state.stats.enemyKills++;
+                    if (target === state.boss.player) {
+                        state.boss.player = null;
+                        state.stats.enemyKills += 49;
+                    }
                 }
             }
         }
@@ -459,44 +479,72 @@ const updateMinion = (unit, enemies, state, deltaTime, team) => {
 };
 
 const updateTurret = (turret, state, deltaTime, isEnemy = false) => {
+    // Initialize turret cooldown if not exists
+    if (turret.shootCooldown === undefined) turret.shootCooldown = 0;
+
+    // Update cooldown
+    turret.shootCooldown -= deltaTime;
+
     // Find enemies in range
     const area = GAME_CONFIG.UNITS.turret.area;
     const targets = isEnemy ? state.units.player : state.units.enemy;
     const team = isEnemy ? GAME_CONFIG.TEAM_ENEMY : GAME_CONFIG.TEAM_PLAYER;
 
+    // Also include enemy boss as target
+    const enemyBoss = isEnemy ? state.boss.player : state.boss.enemy;
+
+    // Find nearest target in range
+    let nearestTarget = null;
+    let nearestDist = Infinity;
+
     targets.forEach(enemy => {
         if (enemy.state === 'dead') return;
         const dist = Math.abs(enemy.x - turret.x) + Math.abs(enemy.y - turret.y);
-        if (dist <= area) {
-            if (Math.random() < deltaTime * 1.5) {
-                // Create projectile effect
-                const proj = createProjectile(turret.x, turret.y, enemy.x, enemy.y, team, turret.atk);
-                state.projectiles.push(proj);
+        if (dist <= area && dist < nearestDist) {
+            nearestDist = dist;
+            nearestTarget = enemy;
+        }
+    });
 
-                const killed = dealDamage(turret, enemy);
-                if (killed) {
-                    if (isEnemy) {
-                        state.stats.enemyKills++;
-                    } else {
-                        state.stats.playerKills++;
-                    }
-                    // Paint area where enemy died
-                    const gx = Math.floor(enemy.x);
-                    const gy = Math.floor(enemy.y);
-                    for (let dy = -2; dy <= 2; dy++) {
-                        for (let dx = -2; dx <= 2; dx++) {
-                            const px = gx + dx;
-                            const py = gy + dy;
-                            if (px >= 0 && px < GAME_CONFIG.GRID_WIDTH &&
-                                py >= 0 && py < GAME_CONFIG.GRID_HEIGHT) {
-                                state.grid[py][px] = team;
-                            }
-                        }
+    // Check boss as target too
+    if (enemyBoss && enemyBoss.hp > 0) {
+        const dist = Math.abs(enemyBoss.x - turret.x) + Math.abs(enemyBoss.y - turret.y);
+        if (dist <= area && dist < nearestDist) {
+            nearestDist = dist;
+            nearestTarget = enemyBoss;
+        }
+    }
+
+    // Shoot if target found and cooldown ready
+    if (nearestTarget && turret.shootCooldown <= 0) {
+        turret.shootCooldown = 0.5; // Shoot every 0.5 seconds (constant rate)
+
+        // Create projectile effect
+        const proj = createProjectile(turret.x, turret.y, nearestTarget.x, nearestTarget.y, team, turret.atk);
+        state.projectiles.push(proj);
+
+        const killed = dealDamage(turret, nearestTarget);
+        if (killed) {
+            if (isEnemy) {
+                state.stats.enemyKills++;
+            } else {
+                state.stats.playerKills++;
+            }
+            // Paint area where enemy died
+            const gx = Math.floor(nearestTarget.x);
+            const gy = Math.floor(nearestTarget.y);
+            for (let dy = -2; dy <= 2; dy++) {
+                for (let dx = -2; dx <= 2; dx++) {
+                    const px = gx + dx;
+                    const py = gy + dy;
+                    if (px >= 0 && px < GAME_CONFIG.GRID_WIDTH &&
+                        py >= 0 && py < GAME_CONFIG.GRID_HEIGHT) {
+                        state.grid[py][px] = team;
                     }
                 }
             }
         }
-    });
+    }
 };
 
 const updateBoss = (state, deltaTime) => {

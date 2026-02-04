@@ -218,7 +218,7 @@
     <!-- HUD -->
     <div id="hud">
         <div class="hud-section">
-            <div class="role-badge">Vanguard <span style="opacity:0.6;font-size:0.7em">v1.9.0</span></div>
+            <div class="role-badge">Vanguard <span style="opacity:0.6;font-size:0.7em">v2.0.0</span></div>
             <div class="stat-box">
                 <div class="stat-label">Room</div>
                 <div class="stat-value" id="roomDisplay">---</div>
@@ -704,10 +704,12 @@
                 group.add(leftEye, rightEye);
 
             } else if (unit.type === 'turret') {
-                // Turret: Base + rotating top + barrel
+                // Turret: Base + rotating top + barrel - Color based on team
+                const turretColor = isPlayer ? 0x3498db : 0xe74c3c; // Blue for player, Red for enemy
+                const turretEmissive = isPlayer ? 0x2980b9 : 0xc0392b;
                 const baseMat = new THREE.MeshStandardMaterial({
-                    color: 0x1abc9c,
-                    emissive: 0x16a085,
+                    color: turretColor,
+                    emissive: turretEmissive,
                     emissiveIntensity: 0.3,
                     metalness: 0.6
                 });
@@ -735,11 +737,11 @@
                 barrel2.position.set(config.size * 0.15, config.size * 0.6, config.size * 0.5);
                 group.add(barrel1, barrel2);
 
-                // Range indicator ring
+                // Range indicator ring - also team colored
                 const ringGeo = new THREE.RingGeometry(GAME_CONFIG.UNITS.turret.area * GAME_CONFIG.CELL_SIZE - 0.1,
                     GAME_CONFIG.UNITS.turret.area * GAME_CONFIG.CELL_SIZE, 32);
                 const ringMat = new THREE.MeshBasicMaterial({
-                    color: 0x1abc9c,
+                    color: turretColor,
                     transparent: true,
                     opacity: 0.2,
                     side: THREE.DoubleSide

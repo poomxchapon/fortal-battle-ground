@@ -319,7 +319,7 @@
     <!-- HUD -->
     <div id="hud">
         <div class="hud-section">
-            <div class="role-badge">Striker <span style="opacity:0.6;font-size:0.7em">v1.9.0</span></div>
+            <div class="role-badge">Striker <span style="opacity:0.6;font-size:0.7em">v2.0.0</span></div>
             <div class="stat-box">
                 <div class="stat-label">Room</div>
                 <div class="stat-value" id="roomDisplay">---</div>
@@ -911,10 +911,12 @@
                 group.add(cape);
 
             } else if (unit.type === 'turret') {
-                // Turret: Mechanical tower with rotating head
+                // Turret: Mechanical tower with rotating head - Color based on team
+                const turretColor = isPlayer ? 0x3498db : 0xe74c3c; // Blue for player, Red for enemy
+                const turretEmissive = isPlayer ? 0x2980b9 : 0xc0392b;
                 const baseMat = new THREE.MeshStandardMaterial({
-                    color: 0x1abc9c,
-                    emissive: 0x16a085,
+                    color: turretColor,
+                    emissive: turretEmissive,
                     emissiveIntensity: 0.4,
                     metalness: 0.7
                 });
@@ -948,9 +950,9 @@
                 barrel2.position.set(config.size * 0.18, config.size * 1, config.size * 0.6);
                 group.add(barrel1, barrel2);
 
-                // Sensor eye
+                // Sensor eye - color based on team
                 const eyeGeo = new THREE.SphereGeometry(config.size * 0.15, 12, 12);
-                const eyeMat = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+                const eyeMat = new THREE.MeshBasicMaterial({ color: isPlayer ? 0x00ff00 : 0xff0000 });
                 const eye = new THREE.Mesh(eyeGeo, eyeMat);
                 eye.position.set(0, config.size * 1.2, config.size * 0.4);
                 group.add(eye);
