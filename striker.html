@@ -286,7 +286,7 @@
     <!-- HUD -->
     <div id="hud">
         <div class="hud-section">
-            <div class="role-badge">Striker <span style="opacity:0.6;font-size:0.7em">v1.3.0</span></div>
+            <div class="role-badge">Striker <span style="opacity:0.6;font-size:0.7em">v1.4.0</span></div>
             <div class="stat-box">
                 <div class="stat-label">Room</div>
                 <div class="stat-value" id="roomDisplay">---</div>
@@ -905,6 +905,9 @@
                 const eye = new THREE.Mesh(eyeGeo, eyeMat);
                 eye.position.set(0, config.size * 1.2, config.size * 0.4);
                 group.add(eye);
+
+                // Rotate turret to face enemy (player turrets face negative Z / low Y)
+                group.rotation.y = isPlayer ? Math.PI : 0;
 
             } else if (unit.type === 'boss') {
                 // Boss: Massive intimidating demon

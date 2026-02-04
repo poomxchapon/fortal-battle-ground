@@ -194,7 +194,7 @@
     <!-- HUD -->
     <div id="hud">
         <div class="hud-section">
-            <div class="role-badge">Vanguard <span style="opacity:0.6;font-size:0.7em">v1.3.0</span></div>
+            <div class="role-badge">Vanguard <span style="opacity:0.6;font-size:0.7em">v1.4.0</span></div>
             <div class="stat-box">
                 <div class="stat-label">Room</div>
                 <div class="stat-value" id="roomDisplay">---</div>
@@ -715,6 +715,9 @@
                 ring.rotation.x = -Math.PI / 2;
                 ring.position.y = 0.05;
                 group.add(ring);
+
+                // Rotate turret to face enemy (player turrets face negative Z / low Y)
+                group.rotation.y = isPlayer ? Math.PI : 0;
 
             } else if (unit.type === 'boss') {
                 // Boss: Large intimidating creature

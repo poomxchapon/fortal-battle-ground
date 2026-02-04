@@ -431,9 +431,65 @@ const updateTurret = (turret, state, deltaTime) => {
 };
 
 const updateBoss = (state, deltaTime) => {
-    // Player boss
-    if (state.boss.player && state.boss.player.hp > 0) {
-        const boss = state.boss.player;
+    const playerBoss = state.boss.player;
+    const enemyBoss = state.boss.enemy;
+
+    // Check if both bosses exist and should fight each other
+    if (playerBoss && playerBoss.hp > 0 && enemyBoss && enemyBoss.hp > 0) {
+        const dist = Math.abs(playerBoss.x - enemyBoss.x) + Math.abs(playerBoss.y - enemyBoss.y);
+
+        if (dist < 8) {
+            // BOSS FIGHT! Both bosses attack each other
+            playerBoss.state = 'fighting';
+            enemyBoss.state = 'fighting';
+
+            // Move toward each other
+            moveToward(playerBoss, enemyBoss.x, enemyBoss.y, deltaTime);
+            moveToward(enemyBoss, playerBoss.x, playerBoss.y, deltaTime);
+
+            // Both deal damage to each other
+            if (Math.random() < deltaTime * 2) {
+                const pAtk = GAME_CONFIG.UNITS.boss.atk;
+                const pDmg = pAtk[0] + Math.random() * (pAtk[1] - pAtk[0]);
+                enemyBoss.hp -= pDmg;
+
+                const eDmg = pAtk[0] + Math.random() * (pAtk[1] - pAtk[0]);
+                playerBoss.hp -= eDmg;
+            }
+
+            // Check deaths
+            if (enemyBoss.hp <= 0) {
+                state.boss.enemy = null;
+                state.stats.playerKills += 50; // Big kill bonus
+            }
+            if (playerBoss.hp <= 0) {
+                state.boss.player = null;
+                state.stats.enemyKills += 50;
+            }
+
+            // Paint battle area
+            const midX = Math.floor((playerBoss.x + enemyBoss.x) / 2);
+            const midY = Math.floor((playerBoss.y + enemyBoss.y) / 2);
+            for (let dy = -2; dy <= 2; dy++) {
+                for (let dx = -2; dx <= 2; dx++) {
+                    const px = midX + dx;
+                    const py = midY + dy;
+                    if (px >= 0 && px < GAME_CONFIG.GRID_WIDTH && py >= 0 && py < GAME_CONFIG.GRID_HEIGHT) {
+                        // Contested area - random team
+                        state.grid[py][px] = Math.random() < 0.5 ? GAME_CONFIG.TEAM_PLAYER : GAME_CONFIG.TEAM_ENEMY;
+                    }
+                }
+            }
+
+            // Skip normal boss behavior when fighting
+            return;
+        }
+    }
+
+    // Player boss normal behavior
+    if (playerBoss && playerBoss.hp > 0) {
+        const boss = playerBoss;
+        boss.state = 'moving';
 
         // Move toward enemy base
         moveToward(boss, boss.x, 0, deltaTime);
@@ -461,7 +517,6 @@ const updateBoss = (state, deltaTime) => {
 
         // Check if reached backline (Gigantic Smash)
         if (boss.y <= 2) {
-            // Paint 90% of the field
             for (let y = 0; y < GAME_CONFIG.GRID_HEIGHT; y++) {
                 for (let x = 0; x < GAME_CONFIG.GRID_WIDTH; x++) {
                     if (Math.random() < 0.9) {
@@ -469,13 +524,14 @@ const updateBoss = (state, deltaTime) => {
                     }
                 }
             }
-            state.boss.player = null; // Boss disappears
+            state.boss.player = null;
         }
     }
 
-    // Enemy boss (AI)
-    if (state.boss.enemy && state.boss.enemy.hp > 0) {
-        const boss = state.boss.enemy;
+    // Enemy boss normal behavior
+    if (enemyBoss && enemyBoss.hp > 0) {
+        const boss = enemyBoss;
+        boss.state = 'moving';
 
         // Move toward player base
         moveToward(boss, boss.x, GAME_CONFIG.GRID_HEIGHT - 1, deltaTime);
