@@ -194,7 +194,7 @@
     <!-- HUD -->
     <div id="hud">
         <div class="hud-section">
-            <div class="role-badge">Vanguard <span style="opacity:0.6;font-size:0.7em">v1.7.0</span></div>
+            <div class="role-badge">Vanguard <span style="opacity:0.6;font-size:0.7em">v1.8.0</span></div>
             <div class="stat-box">
                 <div class="stat-label">Room</div>
                 <div class="stat-value" id="roomDisplay">---</div>
@@ -513,6 +513,7 @@
         let scene, camera, renderer;
         let gridMeshes = [];
         let unitMeshes = {};
+        let projectileMeshes = {};
         let playerMesh = null;
 
         function initThreeJS() {
@@ -875,6 +876,85 @@
             });
         }
 
+        function updateProjectilesVisual() {
+            // Remove old projectiles
+            Object.keys(projectileMeshes).forEach(id => {
+                const found = gameState.projectiles && gameState.projectiles.find(p => p.id === id);
+                if (!found) {
+                    scene.remove(projectileMeshes[id]);
+                    delete projectileMeshes[id];
+                }
+            });
+
+            // Create/update projectile meshes
+            if (!gameState.projectiles) return;
+
+            gameState.projectiles.forEach(proj => {
+                if (!proj.alive) return;
+
+                // Create mesh if needed
+                if (!projectileMeshes[proj.id]) {
+                    const isPlayer = proj.team === GAME_CONFIG.TEAM_PLAYER;
+                    const color = isPlayer ? 0x1abc9c : 0xe74c3c;
+
+                    const group = new THREE.Group();
+
+                    // Glowing projectile ball
+                    const ballGeo = new THREE.SphereGeometry(0.4, 8, 8);
+                    const ballMat = new THREE.MeshBasicMaterial({
+                        color: color,
+                        transparent: true,
+                        opacity: 0.9
+                    });
+                    const ball = new THREE.Mesh(ballGeo, ballMat);
+                    group.add(ball);
+
+                    // Glow effect
+                    const glowGeo = new THREE.SphereGeometry(0.6, 8, 8);
+                    const glowMat = new THREE.MeshBasicMaterial({
+                        color: color,
+                        transparent: true,
+                        opacity: 0.3
+                    });
+                    const glow = new THREE.Mesh(glowGeo, glowMat);
+                    group.add(glow);
+
+                    // Trail
+                    const trailGeo = new THREE.CylinderGeometry(0.15, 0.05, 1.5, 6);
+                    const trailMat = new THREE.MeshBasicMaterial({
+                        color: color,
+                        transparent: true,
+                        opacity: 0.5
+                    });
+                    const trail = new THREE.Mesh(trailGeo, trailMat);
+                    trail.rotation.x = Math.PI / 2;
+                    trail.position.z = -0.8;
+                    group.add(trail);
+
+                    projectileMeshes[proj.id] = group;
+                    scene.add(group);
+                }
+
+                const mesh = projectileMeshes[proj.id];
+
+                // Position
+                mesh.position.set(
+                    (proj.x - GAME_CONFIG.GRID_WIDTH / 2 + 0.5) * GAME_CONFIG.CELL_SIZE,
+                    1.5, // Elevated above ground
+                    (proj.y - GAME_CONFIG.GRID_HEIGHT / 2 + 0.5) * GAME_CONFIG.CELL_SIZE
+                );
+
+                // Rotate toward target
+                const dx = proj.targetX - proj.x;
+                const dy = proj.targetY - proj.y;
+                mesh.rotation.y = Math.atan2(dx, dy);
+
+                // Pulsing glow effect
+                const t = Date.now() * 0.01;
+                mesh.children[1].scale.setScalar(1 + Math.sin(t) * 0.2);
+            });
+        }
+
         function updatePlayerVisual() {
             const px = (gameState.players.vanguard.x - GAME_CONFIG.GRID_WIDTH / 2 + 0.5) * GAME_CONFIG.CELL_SIZE;
             const pz = (gameState.players.vanguard.y - GAME_CONFIG.GRID_HEIGHT / 2 + 0.5) * GAME_CONFIG.CELL_SIZE;
@@ -1021,6 +1101,13 @@
                 delta.be = [b.x.toFixed(1), b.y.toFixed(1), b.hp, b.weakPointVisible ? 1 : 0];
             }
 
+            // Projectiles (compact format: id, x, y, targetX, targetY, team)
+            if (gameState.projectiles && gameState.projectiles.length > 0) {
+                delta.proj = gameState.projectiles.map(p => [
+                    p.id, p.x.toFixed(1), p.y.toFixed(1), p.targetX.toFixed(1), p.targetY.toFixed(1), p.team
+                ]);
+            }
+
             // Update last grid state
             lastGridState = gameState.grid.map(row => [...row]);
 
@@ -1059,6 +1146,7 @@
                 // Update visuals
                 updateGrid();
                 updateUnitsVisual();
+                updateProjectilesVisual();
                 updatePlayerVisual();
                 updateUI();
 

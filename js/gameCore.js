@@ -96,7 +96,10 @@ const createGameState = () => ({
         enemyTiles: 0,
         playerKills: 0,
         enemyKills: 0
-    }
+    },
+
+    // Projectiles for visual effects
+    projectiles: []
 });
 
 // Initialize grid
@@ -236,6 +239,44 @@ const dealDamage = (attacker, defender) => {
     return false;
 };
 
+// ==================== PROJECTILE SYSTEM ====================
+const createProjectile = (fromX, fromY, toX, toY, team, damage) => {
+    return {
+        id: `proj-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+        x: fromX,
+        y: fromY,
+        targetX: toX,
+        targetY: toY,
+        team: team,
+        damage: damage,
+        speed: 15, // Fast projectile
+        alive: true
+    };
+};
+
+const updateProjectiles = (state, deltaTime) => {
+    state.projectiles.forEach(proj => {
+        if (!proj.alive) return;
+
+        // Move toward target
+        const dx = proj.targetX - proj.x;
+        const dy = proj.targetY - proj.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        if (dist < 0.5) {
+            // Reached target
+            proj.alive = false;
+        } else {
+            // Move
+            proj.x += (dx / dist) * proj.speed * deltaTime;
+            proj.y += (dy / dist) * proj.speed * deltaTime;
+        }
+    });
+
+    // Remove dead projectiles
+    state.projectiles = state.projectiles.filter(p => p.alive);
+};
+
 // ==================== SKILLS ====================
 const useSkillHero = (state, x, y) => {
     if (!state.players.commander.skills.hero.ready) return false;
@@ -346,7 +387,7 @@ const updateUnits = (state, deltaTime) => {
     state.units.player.forEach(unit => {
         if (unit.state === 'dead') return;
         if (unit.type === 'turret') {
-            updateTurret(unit, state, deltaTime);
+            updateTurret(unit, state, deltaTime, false);
         } else {
             updateMinion(unit, state.units.enemy, state, deltaTime, GAME_CONFIG.TEAM_PLAYER);
         }
@@ -355,8 +396,15 @@ const updateUnits = (state, deltaTime) => {
     // Update enemy units
     state.units.enemy.forEach(unit => {
         if (unit.state === 'dead') return;
-        updateMinion(unit, state.units.player, state, deltaTime, GAME_CONFIG.TEAM_ENEMY);
+        if (unit.type === 'turret') {
+            updateTurret(unit, state, deltaTime, true); // Enemy turret
+        } else {
+            updateMinion(unit, state.units.player, state, deltaTime, GAME_CONFIG.TEAM_ENEMY);
+        }
     });
+
+    // Update projectiles
+    updateProjectiles(state, deltaTime);
 
     // Remove dead units
     state.units.player = state.units.player.filter(u => u.state !== 'dead');
@@ -410,17 +458,28 @@ const updateMinion = (unit, enemies, state, deltaTime, team) => {
     }
 };
 
-const updateTurret = (turret, state, deltaTime) => {
+const updateTurret = (turret, state, deltaTime, isEnemy = false) => {
     // Find enemies in range
     const area = GAME_CONFIG.UNITS.turret.area;
-    state.units.enemy.forEach(enemy => {
+    const targets = isEnemy ? state.units.player : state.units.enemy;
+    const team = isEnemy ? GAME_CONFIG.TEAM_ENEMY : GAME_CONFIG.TEAM_PLAYER;
+
+    targets.forEach(enemy => {
         if (enemy.state === 'dead') return;
         const dist = Math.abs(enemy.x - turret.x) + Math.abs(enemy.y - turret.y);
         if (dist <= area) {
             if (Math.random() < deltaTime * 1.5) {
+                // Create projectile effect
+                const proj = createProjectile(turret.x, turret.y, enemy.x, enemy.y, team, turret.atk);
+                state.projectiles.push(proj);
+
                 const killed = dealDamage(turret, enemy);
                 if (killed) {
-                    state.stats.playerKills++;
+                    if (isEnemy) {
+                        state.stats.enemyKills++;
+                    } else {
+                        state.stats.playerKills++;
+                    }
                     // Paint area where enemy died
                     const gx = Math.floor(enemy.x);
                     const gy = Math.floor(enemy.y);
@@ -430,7 +489,7 @@ const updateTurret = (turret, state, deltaTime) => {
                             const py = gy + dy;
                             if (px >= 0 && px < GAME_CONFIG.GRID_WIDTH &&
                                 py >= 0 && py < GAME_CONFIG.GRID_HEIGHT) {
-                                state.grid[py][px] = GAME_CONFIG.TEAM_PLAYER;
+                                state.grid[py][px] = team;
                             }
                         }
                     }
