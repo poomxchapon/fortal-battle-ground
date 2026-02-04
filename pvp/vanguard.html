@@ -1408,7 +1408,7 @@
         document.addEventListener('keyup', e => keys[e.code] = false);
 
         function handleInput(deltaTime) {
-            const speed = 8 * deltaTime;
+            const speed = 5 * deltaTime;
             let moved = false;
 
             // Which vanguard do I control?
@@ -1483,13 +1483,17 @@
 
         function showGameOver() {
             const total = GAME_CONFIG.GRID_WIDTH * GAME_CONFIG.GRID_HEIGHT;
-            const playerPct = Math.round(gameState.stats.playerTiles / total * 100);
-            const won = gameState.stats.playerTiles > gameState.stats.enemyTiles;
+            // Check winner based on MY_TEAM
+            const myTiles = MY_TEAM === 'blue' ? gameState.stats.playerTiles : gameState.stats.enemyTiles;
+            const enemyTiles = MY_TEAM === 'blue' ? gameState.stats.enemyTiles : gameState.stats.playerTiles;
+            const myKills = MY_TEAM === 'blue' ? gameState.stats.playerKills : (gameState.stats.enemyKills || 0);
+            const myPct = Math.round(myTiles / total * 100);
+            const won = myTiles > enemyTiles;
 
             document.getElementById('resultTitle').textContent = won ? 'VICTORY!' : 'DEFEAT';
             document.getElementById('resultTitle').style.color = won ? '#2ecc71' : '#e74c3c';
-            document.getElementById('resultText').textContent = `Your team controls ${playerPct}% of the field!`;
-            document.getElementById('resultStats').textContent = `Tiles painted: ${gameState.stats.playerTiles} | Team kills: ${gameState.stats.playerKills}`;
+            document.getElementById('resultText').textContent = `Your team controls ${myPct}% of the field!`;
+            document.getElementById('resultStats').textContent = `Tiles painted: ${myTiles} | Team kills: ${myKills}`;
             document.getElementById('gameOver').classList.remove('hidden');
         }
 

@@ -517,8 +517,8 @@
                 railgun: 1500
             },
             damage: {
-                assault: 25,
-                railgun: 150
+                assault: 40,
+                railgun: 250
             },
             energyCost: {
                 assault: 5,
@@ -1355,7 +1355,7 @@
 
             // Movement direction based on yaw (camera facing)
             const forward = { x: Math.sin(yaw), z: Math.cos(yaw) };
-            const right = { x: Math.cos(yaw), z: -Math.sin(yaw) };
+            const right = { x: -Math.cos(yaw), z: Math.sin(yaw) };
 
             let moveX = 0, moveZ = 0;
 

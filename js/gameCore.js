@@ -370,6 +370,9 @@ const useSkillHeroEnemy = (state, x, y) => {
     if (state.grid[Math.floor(y)][Math.floor(x)] !== GAME_CONFIG.TEAM_ENEMY) return false;
     const hero = createUnit('hero', GAME_CONFIG.TEAM_ENEMY, x, y);
     state.units.enemy.push(hero);
+    // Set cooldown for red commander
+    state.players.commander.skills.hero.ready = false;
+    state.players.commander.skills.hero.cooldown = GAME_CONFIG.SKILL_HERO_CD;
     return true;
 };
 
@@ -377,6 +380,9 @@ const useSkillTurretEnemy = (state, x, y) => {
     if (state.grid[Math.floor(y)][Math.floor(x)] !== GAME_CONFIG.TEAM_ENEMY) return false;
     const turret = createUnit('turret', GAME_CONFIG.TEAM_ENEMY, x, y);
     state.units.enemy.push(turret);
+    // Set cooldown for red commander
+    state.players.commander.skills.turret.ready = false;
+    state.players.commander.skills.turret.cooldown = GAME_CONFIG.SKILL_TURRET_CD;
     return true;
 };
 
@@ -430,12 +436,17 @@ const useSkillMeteorEnemy = (state, x, y) => {
     }
 
     updateTileCount(state);
+    // Set cooldown for red commander
+    state.players.commander.skills.meteor.ready = false;
+    state.players.commander.skills.meteor.cooldown = GAME_CONFIG.SKILL_METEOR_CD;
     return true;
 };
 
 const useSkillBossEnemy = (state) => {
     if (state.boss.enemy) return false;
     spawnBoss(state, GAME_CONFIG.TEAM_ENEMY);
+    // Set cooldown for red commander
+    state.players.commander.skills.boss.ready = false;
     return true;
 };
 
