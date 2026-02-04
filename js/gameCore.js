@@ -688,9 +688,9 @@ let aiHeroTimer = 0;
 const updateAI = (state, deltaTime) => {
     // AI spawns minions periodically (handled by main game loop)
 
-    // AI spawns turrets every 15-25 seconds
+    // AI spawns turrets every 30-45 seconds (reduced from 15-25)
     aiTurretTimer += deltaTime;
-    if (aiTurretTimer >= 15 + Math.random() * 10) {
+    if (aiTurretTimer >= 30 + Math.random() * 15) {
         aiTurretTimer = 0;
         // Find a spot in enemy territory to place turret
         const enemyTiles = [];
@@ -709,9 +709,9 @@ const updateAI = (state, deltaTime) => {
         }
     }
 
-    // AI spawns heroes every 20-30 seconds
+    // AI spawns heroes every 45-60 seconds (reduced from 20-30)
     aiHeroTimer += deltaTime;
-    if (aiHeroTimer >= 20 + Math.random() * 10) {
+    if (aiHeroTimer >= 45 + Math.random() * 15) {
         aiHeroTimer = 0;
         // Spawn hero at enemy base
         const x = randomRange(2, GAME_CONFIG.GRID_WIDTH - 3);
@@ -719,16 +719,16 @@ const updateAI = (state, deltaTime) => {
         state.units.enemy.push(hero);
     }
 
-    // AI might spawn boss when losing badly
-    if (!state.boss.enemy && state.stats.enemyTiles < state.stats.playerTiles * 0.4) {
-        if (Math.random() < 0.002) { // Higher chance when losing
+    // AI might spawn boss when losing badly (reduced chance)
+    if (!state.boss.enemy && state.stats.enemyTiles < state.stats.playerTiles * 0.3) {
+        if (Math.random() < 0.0005) { // Lower chance
             spawnBoss(state, GAME_CONFIG.TEAM_ENEMY);
         }
     }
 
-    // AI spawns boss when player has boss (counter)
+    // AI spawns boss when player has boss (counter) - reduced chance
     if (!state.boss.enemy && state.boss.player) {
-        if (Math.random() < 0.01) {
+        if (Math.random() < 0.003) {
             spawnBoss(state, GAME_CONFIG.TEAM_ENEMY);
         }
     }

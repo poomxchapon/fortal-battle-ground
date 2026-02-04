@@ -307,7 +307,7 @@
     <!-- HUD -->
     <div id="hud">
         <div class="hud-section">
-            <div class="role-badge">Commander <span style="opacity:0.6;font-size:0.7em">v2.0.0</span></div>
+            <div class="role-badge">Commander <span style="opacity:0.6;font-size:0.7em">v2.1.0</span></div>
             <div class="stat-box">
                 <div class="stat-label">Room</div>
                 <div class="stat-value" id="roomDisplay">---</div>
@@ -1006,7 +1006,12 @@
                     const baseRot = unit.team === GAME_CONFIG.TEAM_PLAYER ? Math.PI : 0;
                     mesh.rotation.y = baseRot;
                 } else if (unit.type === 'turret') {
-                    if (mesh.children[1]) mesh.children[1].rotation.y = elapsed * 2;
+                    // Rotate turret left-right (scanning motion)
+                    if (mesh.children[1]) {
+                        const idHash = unit.id.charCodeAt(unit.id.length - 1) || 0;
+                        const speed = 0.8 + (idHash % 5) * 0.2;
+                        mesh.children[1].rotation.y = Math.sin(elapsed * speed + idHash) * 0.8;
+                    }
                     if (mesh.children[5]) mesh.children[5].material.opacity = 0.15 + Math.sin(elapsed * 3) * 0.1;
                 } else if (unit.type === 'boss') {
                     mesh.rotation.y = Math.sin(elapsed) * 0.05;

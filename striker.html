@@ -319,7 +319,7 @@
     <!-- HUD -->
     <div id="hud">
         <div class="hud-section">
-            <div class="role-badge">Striker <span style="opacity:0.6;font-size:0.7em">v2.0.0</span></div>
+            <div class="role-badge">Striker <span style="opacity:0.6;font-size:0.7em">v2.1.0</span></div>
             <div class="stat-box">
                 <div class="stat-label">Room</div>
                 <div class="stat-value" id="roomDisplay">---</div>
@@ -1086,8 +1086,12 @@
                     const baseRot = unit.team === GAME_CONFIG.TEAM_PLAYER ? Math.PI : 0;
                     mesh.rotation.y = baseRot;
                 } else if (unit.type === 'turret') {
-                    // Dome rotation
-                    if (mesh.children[2]) mesh.children[2].rotation.y = elapsed * 2;
+                    // Dome rotation - left/right scanning
+                    if (mesh.children[2]) {
+                        const idHash = unit.id.charCodeAt(unit.id.length - 1) || 0;
+                        const speed = 0.8 + (idHash % 5) * 0.2;
+                        mesh.children[2].rotation.y = Math.sin(elapsed * speed + idHash) * 0.8;
+                    }
                     // Sensor eye pulse
                     if (mesh.children[5]) {
                         const pulse = 0.8 + Math.sin(elapsed * 6) * 0.2;
