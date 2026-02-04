@@ -170,7 +170,8 @@
 
     <script>
         function generateRoomId() {
-            const id = 'room-' + Math.random().toString(36).substr(2, 6);
+            // Simple 4-digit room code (1000-9999)
+            const id = Math.floor(1000 + Math.random() * 9000).toString();
             document.getElementById('roomId').value = id;
             updateLinks();
         }
