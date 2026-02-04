@@ -832,12 +832,26 @@
             gameState.players.vanguard.x = Math.max(0, Math.min(GAME_CONFIG.GRID_WIDTH - 1, gameState.players.vanguard.x));
             gameState.players.vanguard.y = Math.max(0, Math.min(GAME_CONFIG.GRID_HEIGHT - 1, gameState.players.vanguard.y));
 
-            // Paint trail (Permanent Rage)
+            // Paint trail (Permanent Rage) - 5 tiles: center + cross pattern
             if (moved) {
                 const gx = Math.floor(gameState.players.vanguard.x);
                 const gy = Math.floor(gameState.players.vanguard.y);
-                if (gx >= 0 && gx < GAME_CONFIG.GRID_WIDTH && gy >= 0 && gy < GAME_CONFIG.GRID_HEIGHT) {
-                    gameState.grid[gy][gx] = GAME_CONFIG.TEAM_PLAYER;
+
+                // Paint cross pattern (5 tiles)
+                const paintOffsets = [
+                    [0, 0],   // center
+                    [-1, 0],  // left
+                    [1, 0],   // right
+                    [0, -1],  // up
+                    [0, 1]    // down
+                ];
+
+                for (const [dx, dy] of paintOffsets) {
+                    const px = gx + dx;
+                    const py = gy + dy;
+                    if (px >= 0 && px < GAME_CONFIG.GRID_WIDTH && py >= 0 && py < GAME_CONFIG.GRID_HEIGHT) {
+                        gameState.grid[py][px] = GAME_CONFIG.TEAM_PLAYER;
+                    }
                 }
 
                 broadcast({
