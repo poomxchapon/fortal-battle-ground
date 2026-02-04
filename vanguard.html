@@ -863,8 +863,8 @@
             }
 
             // Add health bar above unit (different heights for different unit types)
-            const healthBarHeights = { soldier: 1.8, hero: 3.5, turret: 2.0, boss: 5.5 };
-            const healthBarWidths = { soldier: 1.2, hero: 2.0, turret: 2.0, boss: 4.0 };
+            const healthBarHeights = { soldier: 1.8, hero: 3.5, turret: 1.5, boss: 12.0 };
+            const healthBarWidths = { soldier: 1.2, hero: 2.0, turret: 2.0, boss: 5.0 };
             const healthBar = createHealthBar(healthBarWidths[unit.type], 0.2);
             healthBar.position.y = healthBarHeights[unit.type];
             group.add(healthBar);

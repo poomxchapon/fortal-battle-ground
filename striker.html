@@ -1084,9 +1084,9 @@
                 }
             }
 
-            // Add health bar above unit
-            const healthBarHeights = { soldier: 2.2, hero: 4.0, turret: 2.5, boss: 6.0 };
-            const healthBarWidths = { soldier: 1.5, hero: 2.5, turret: 2.5, boss: 5.0 };
+            // Add health bar above unit (adjusted for FPS view - needs to be higher)
+            const healthBarHeights = { soldier: 2.5, hero: 5.0, turret: 4.5, boss: 16.0 };
+            const healthBarWidths = { soldier: 1.5, hero: 2.5, turret: 2.5, boss: 6.0 };
             const healthBar = createHealthBar(healthBarWidths[unit.type], 0.25);
             healthBar.position.y = healthBarHeights[unit.type];
             group.add(healthBar);
