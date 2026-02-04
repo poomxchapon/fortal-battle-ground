@@ -256,6 +256,18 @@
         #gameOver.hidden { display: none; }
         #gameOver h1 { font-size: 4em; margin-bottom: 20px; }
         #gameOver .result { font-size: 2em; margin-bottom: 30px; }
+        #gameOver .stats { font-size: 1.2em; color: #888; margin-bottom: 30px; }
+        #gameOver .home-btn {
+            padding: 15px 40px;
+            font-size: 1.2em;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+        #gameOver .home-btn:hover { background: #2980b9; }
     </style>
 </head>
 <body>
@@ -271,7 +283,7 @@
     <!-- HUD -->
     <div id="hud">
         <div class="hud-section">
-            <div class="role-badge">Commander <span style="opacity:0.6;font-size:0.7em">v1.2.1</span></div>
+            <div class="role-badge">Commander <span style="opacity:0.6;font-size:0.7em">v1.3.0</span></div>
             <div class="stat-box">
                 <div class="stat-label">Room</div>
                 <div class="stat-value" id="roomDisplay">---</div>
@@ -348,6 +360,8 @@
     <div id="gameOver" class="hidden">
         <h1 id="resultTitle">VICTORY!</h1>
         <div class="result" id="resultText">Your team wins!</div>
+        <div class="stats" id="resultStats">Team kills: 0 | Territory: 0%</div>
+        <button class="home-btn" onclick="location.href='index.html'">🏠 Back to Lobby</button>
     </div>
 
     <!-- Waiting Room -->
@@ -1098,7 +1112,8 @@
             document.getElementById('resultTitle').style.color = won ? '#2ecc71' : '#e74c3c';
             const total = GAME_CONFIG.GRID_WIDTH * GAME_CONFIG.GRID_HEIGHT;
             const pct = Math.round(gameState.stats.playerTiles / total * 100);
-            document.getElementById('resultText').textContent = `Your team controls ${pct}%`;
+            document.getElementById('resultText').textContent = `Your team controls ${pct}% of the field!`;
+            document.getElementById('resultStats').textContent = `Team kills: ${gameState.stats.playerKills} | Territory: ${gameState.stats.playerTiles} tiles`;
             document.getElementById('gameOver').classList.remove('hidden');
         }
 

@@ -167,7 +167,18 @@
         #gameOver.hidden { display: none; }
         #gameOver h1 { font-size: 4em; margin-bottom: 20px; }
         #gameOver .result { font-size: 2em; margin-bottom: 30px; }
-        #gameOver .stats { font-size: 1.2em; color: #888; }
+        #gameOver .stats { font-size: 1.2em; color: #888; margin-bottom: 30px; }
+        #gameOver .home-btn {
+            padding: 15px 40px;
+            font-size: 1.2em;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+        #gameOver .home-btn:hover { background: #2980b9; }
     </style>
 </head>
 <body>
@@ -183,7 +194,7 @@
     <!-- HUD -->
     <div id="hud">
         <div class="hud-section">
-            <div class="role-badge">Vanguard <span style="opacity:0.6;font-size:0.7em">v1.2.1</span></div>
+            <div class="role-badge">Vanguard <span style="opacity:0.6;font-size:0.7em">v1.3.0</span></div>
             <div class="stat-box">
                 <div class="stat-label">Room</div>
                 <div class="stat-value" id="roomDisplay">---</div>
@@ -228,6 +239,7 @@
         <h1 id="resultTitle">VICTORY!</h1>
         <div class="result" id="resultText">Your team controls 65% of the field!</div>
         <div class="stats" id="resultStats">Tiles painted: 234 | Team kills: 89</div>
+        <button class="home-btn" onclick="location.href='index.html'">🏠 Back to Lobby</button>
     </div>
 
     <!-- Waiting Room -->
