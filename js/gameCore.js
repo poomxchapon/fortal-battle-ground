@@ -303,14 +303,38 @@ const useSkillMeteor = (state, x, y) => {
 
     // Kill all enemies in 10x10 area
     const radius = 5;
+    const meteorDamage = 500; // Damage dealt to boss/turret
+
     state.units.enemy = state.units.enemy.filter(unit => {
         const dist = Math.abs(unit.x - x) + Math.abs(unit.y - y);
         if (dist <= radius) {
+            // Turrets take damage instead of instant kill
+            if (unit.type === 'turret') {
+                unit.hp -= meteorDamage;
+                if (unit.hp <= 0) {
+                    state.stats.playerKills++;
+                    return false; // Remove
+                }
+                return true; // Keep (still alive)
+            }
             state.stats.playerKills++;
-            return false; // Remove
+            return false; // Remove (instant kill soldiers/heroes)
         }
         return true;
     });
+
+    // Damage enemy boss if in range
+    if (state.boss.enemy && state.boss.enemy.hp > 0) {
+        const bossDist = Math.abs(state.boss.enemy.x - x) + Math.abs(state.boss.enemy.y - y);
+        if (bossDist <= radius + 3) { // Larger hit area for boss (boss is big)
+            state.boss.enemy.hp -= meteorDamage;
+            if (state.boss.enemy.hp <= 0) {
+                state.boss.enemy.hp = 0;
+                state.boss.enemy.state = 'dead';
+                state.stats.playerKills++;
+            }
+        }
+    }
 
     // Paint area
     for (let dy = -radius; dy <= radius; dy++) {
