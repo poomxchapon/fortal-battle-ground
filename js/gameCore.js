@@ -479,8 +479,22 @@ const updateMinion = (unit, enemies, state, deltaTime, team) => {
 };
 
 const updateTurret = (turret, state, deltaTime, isEnemy = false) => {
-    // Initialize turret cooldown if not exists
+    // Initialize turret properties if not exists
     if (turret.shootCooldown === undefined) turret.shootCooldown = 0;
+    if (turret.scanAngle === undefined) turret.scanAngle = Math.random() * Math.PI * 2;
+    if (turret.scanDirection === undefined) turret.scanDirection = Math.random() > 0.5 ? 1 : -1;
+    if (turret.scanSpeed === undefined) turret.scanSpeed = 0.5 + Math.random() * 0.5;
+
+    // Update scan rotation (left-right motion)
+    turret.scanAngle += turret.scanDirection * turret.scanSpeed * deltaTime;
+    // Reverse direction at limits (-60 to +60 degrees from center)
+    if (turret.scanAngle > Math.PI / 3) {
+        turret.scanAngle = Math.PI / 3;
+        turret.scanDirection = -1;
+    } else if (turret.scanAngle < -Math.PI / 3) {
+        turret.scanAngle = -Math.PI / 3;
+        turret.scanDirection = 1;
+    }
 
     // Update cooldown
     turret.shootCooldown -= deltaTime;
@@ -515,31 +529,48 @@ const updateTurret = (turret, state, deltaTime, isEnemy = false) => {
         }
     }
 
-    // Shoot if target found and cooldown ready
-    if (nearestTarget && turret.shootCooldown <= 0) {
-        turret.shootCooldown = 0.5; // Shoot every 0.5 seconds (constant rate)
+    // Auto-shoot every 2 seconds
+    if (turret.shootCooldown <= 0) {
+        turret.shootCooldown = 2.0; // Shoot every 2 seconds
+
+        let targetX, targetY;
+
+        if (nearestTarget) {
+            // Shoot at target
+            targetX = nearestTarget.x;
+            targetY = nearestTarget.y;
+        } else {
+            // No target - shoot in scan direction
+            const baseAngle = isEnemy ? Math.PI / 2 : -Math.PI / 2; // Enemy shoots down, player shoots up
+            const shootAngle = baseAngle + turret.scanAngle;
+            targetX = turret.x + Math.cos(shootAngle) * area;
+            targetY = turret.y + Math.sin(shootAngle) * area;
+        }
 
         // Create projectile effect
-        const proj = createProjectile(turret.x, turret.y, nearestTarget.x, nearestTarget.y, team, turret.atk);
+        const proj = createProjectile(turret.x, turret.y, targetX, targetY, team, turret.atk);
         state.projectiles.push(proj);
 
-        const killed = dealDamage(turret, nearestTarget);
-        if (killed) {
-            if (isEnemy) {
-                state.stats.enemyKills++;
-            } else {
-                state.stats.playerKills++;
-            }
-            // Paint area where enemy died
-            const gx = Math.floor(nearestTarget.x);
-            const gy = Math.floor(nearestTarget.y);
-            for (let dy = -2; dy <= 2; dy++) {
-                for (let dx = -2; dx <= 2; dx++) {
-                    const px = gx + dx;
-                    const py = gy + dy;
-                    if (px >= 0 && px < GAME_CONFIG.GRID_WIDTH &&
-                        py >= 0 && py < GAME_CONFIG.GRID_HEIGHT) {
-                        state.grid[py][px] = team;
+        // Only deal damage if there's a target
+        if (nearestTarget) {
+            const killed = dealDamage(turret, nearestTarget);
+            if (killed) {
+                if (isEnemy) {
+                    state.stats.enemyKills++;
+                } else {
+                    state.stats.playerKills++;
+                }
+                // Paint area where enemy died
+                const gx = Math.floor(nearestTarget.x);
+                const gy = Math.floor(nearestTarget.y);
+                for (let dy = -2; dy <= 2; dy++) {
+                    for (let dx = -2; dx <= 2; dx++) {
+                        const px = gx + dx;
+                        const py = gy + dy;
+                        if (px >= 0 && px < GAME_CONFIG.GRID_WIDTH &&
+                            py >= 0 && py < GAME_CONFIG.GRID_HEIGHT) {
+                            state.grid[py][px] = team;
+                        }
                     }
                 }
             }

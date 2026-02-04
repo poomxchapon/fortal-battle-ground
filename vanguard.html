@@ -871,12 +871,10 @@
                     const baseRot = unit.team === GAME_CONFIG.TEAM_PLAYER ? Math.PI : 0;
                     mesh.rotation.y = baseRot + Math.sin(elapsed * 2) * 0.1;
                 } else if (unit.type === 'turret') {
-                    // Rotate turret top left-right (scanning motion)
+                    // Rotate turret top using actual scanAngle from game state
                     if (mesh.children[1]) {
-                        // Use unit id hash for random offset so each turret has different timing
-                        const idHash = unit.id.charCodeAt(unit.id.length - 1) || 0;
-                        const speed = 0.8 + (idHash % 5) * 0.2; // Random speed 0.8-1.6
-                        mesh.children[1].rotation.y = Math.sin(elapsed * speed + idHash) * 0.8; // Sweep ±0.8 radians
+                        const scanAngle = unit.scanAngle !== undefined ? unit.scanAngle : 0;
+                        mesh.children[1].rotation.y = scanAngle;
                     }
                     // Pulse range ring
                     if (mesh.children[5]) {
@@ -1170,9 +1168,17 @@
                 delta.gc = gridChanges;
             }
 
-            // Units (compact format: id, type, team, x, y, hp, state)
-            delta.pu = gameState.units.player.map(u => [u.id, u.type[0], u.x.toFixed(1), u.y.toFixed(1), u.hp, u.state[0]]);
-            delta.eu = gameState.units.enemy.map(u => [u.id, u.type[0], u.x.toFixed(1), u.y.toFixed(1), u.hp, u.state[0]]);
+            // Units (compact format: id, type, x, y, hp, state, scanAngle for turrets)
+            delta.pu = gameState.units.player.map(u => {
+                const arr = [u.id, u.type[0], u.x.toFixed(1), u.y.toFixed(1), u.hp, u.state[0]];
+                if (u.type === 'turret' && u.scanAngle !== undefined) arr.push(u.scanAngle.toFixed(2));
+                return arr;
+            });
+            delta.eu = gameState.units.enemy.map(u => {
+                const arr = [u.id, u.type[0], u.x.toFixed(1), u.y.toFixed(1), u.hp, u.state[0]];
+                if (u.type === 'turret' && u.scanAngle !== undefined) arr.push(u.scanAngle.toFixed(2));
+                return arr;
+            });
 
             // Boss (if exists)
             if (gameState.boss.player) {

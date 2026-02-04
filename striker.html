@@ -677,16 +677,26 @@
             const typeMap = { s: 'soldier', h: 'hero', t: 'turret', b: 'boss' };
             const stateMap = { m: 'moving', f: 'fighting', d: 'dead' };
 
-            gameState.units.player = d.pu.map(([id, t, x, y, hp, s]) => ({
-                id, type: typeMap[t], team: GAME_CONFIG.TEAM_PLAYER,
-                x: parseFloat(x), y: parseFloat(y), hp, state: stateMap[s],
-                size: GAME_CONFIG.UNITS[typeMap[t]].size
-            }));
+            gameState.units.player = d.pu.map((arr) => {
+                const [id, t, x, y, hp, s, scanAngle] = arr;
+                const unit = {
+                    id, type: typeMap[t], team: GAME_CONFIG.TEAM_PLAYER,
+                    x: parseFloat(x), y: parseFloat(y), hp, state: stateMap[s],
+                    size: GAME_CONFIG.UNITS[typeMap[t]].size
+                };
+                if (scanAngle !== undefined) unit.scanAngle = parseFloat(scanAngle);
+                return unit;
+            });
 
-            gameState.units.enemy = d.eu.map(([id, t, x, y, hp, s]) => ({
-                id, type: typeMap[t], team: GAME_CONFIG.TEAM_ENEMY,
-                x: parseFloat(x), y: parseFloat(y), hp, state: stateMap[s],
-                size: GAME_CONFIG.UNITS[typeMap[t]].size
+            gameState.units.enemy = d.eu.map((arr) => {
+                const [id, t, x, y, hp, s, scanAngle] = arr;
+                const unit = {
+                    id, type: typeMap[t], team: GAME_CONFIG.TEAM_ENEMY,
+                    x: parseFloat(x), y: parseFloat(y), hp, state: stateMap[s],
+                    size: GAME_CONFIG.UNITS[typeMap[t]].size
+                };
+                if (scanAngle !== undefined) unit.scanAngle = parseFloat(scanAngle);
+                return unit
             }));
 
             // Boss
@@ -1092,11 +1102,10 @@
                     const baseRot = unit.team === GAME_CONFIG.TEAM_PLAYER ? Math.PI : 0;
                     mesh.rotation.y = baseRot;
                 } else if (unit.type === 'turret') {
-                    // Dome rotation - left/right scanning
+                    // Dome rotation using actual scanAngle from game state
                     if (mesh.children[2]) {
-                        const idHash = unit.id.charCodeAt(unit.id.length - 1) || 0;
-                        const speed = 0.8 + (idHash % 5) * 0.2;
-                        mesh.children[2].rotation.y = Math.sin(elapsed * speed + idHash) * 0.8;
+                        const scanAngle = unit.scanAngle !== undefined ? unit.scanAngle : 0;
+                        mesh.children[2].rotation.y = scanAngle;
                     }
                     // Sensor eye pulse
                     if (mesh.children[5]) {
