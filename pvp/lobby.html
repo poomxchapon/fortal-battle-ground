@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fortal Battle Ground - PvP Mode</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+        }
+        .lobby {
+            background: rgba(255,255,255,0.1);
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+            max-width: 800px;
+            width: 95%;
+        }
+        h1 {
+            margin-bottom: 10px;
+            font-size: 2em;
+        }
+        .subtitle {
+            color: #888;
+            margin-bottom: 20px;
+        }
+        .back-link {
+            display: inline-block;
+            margin-bottom: 20px;
+            color: #e74c3c;
+            text-decoration: none;
+        }
+        .back-link:hover {
+            text-decoration: underline;
+        }
+        .section {
+            margin: 20px 0;
+        }
+        .section h3 {
+            margin-bottom: 10px;
+            color: #aaa;
+        }
+        input {
+            padding: 12px 20px;
+            font-size: 16px;
+            border: none;
+            border-radius: 10px;
+            width: 100%;
+            max-width: 300px;
+            margin-bottom: 10px;
+            background: rgba(255,255,255,0.2);
+            color: white;
+        }
+        input::placeholder {
+            color: #888;
+        }
+        .btn {
+            padding: 12px 30px;
+            font-size: 16px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin: 5px;
+        }
+        .btn-secondary {
+            background: #9b59b6;
+            color: white;
+        }
+        .btn-secondary:hover {
+            background: #8e44ad;
+        }
+        .teams-container {
+            display: flex;
+            gap: 30px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin: 20px 0;
+        }
+        .team {
+            flex: 1;
+            min-width: 280px;
+            max-width: 350px;
+            padding: 20px;
+            border-radius: 15px;
+        }
+        .team.blue {
+            background: rgba(52, 152, 219, 0.15);
+            border: 2px solid #3498db;
+        }
+        .team.red {
+            background: rgba(231, 76, 60, 0.15);
+            border: 2px solid #e74c3c;
+        }
+        .team h2 {
+            font-size: 1.5em;
+            margin-bottom: 15px;
+        }
+        .team.blue h2 {
+            color: #3498db;
+        }
+        .team.red h2 {
+            color: #e74c3c;
+        }
+        .roles {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .role-btn {
+            padding: 15px;
+            border: 2px solid #444;
+            border-radius: 12px;
+            background: rgba(255,255,255,0.05);
+            cursor: pointer;
+            transition: all 0.3s;
+            text-decoration: none;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .team.blue .role-btn:hover {
+            border-color: #3498db;
+            background: rgba(52, 152, 219, 0.3);
+        }
+        .team.red .role-btn:hover {
+            border-color: #e74c3c;
+            background: rgba(231, 76, 60, 0.3);
+        }
+        .role-btn .icon {
+            font-size: 2em;
+        }
+        .role-btn .info {
+            text-align: left;
+        }
+        .role-btn .name {
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+        .role-btn .desc {
+            font-size: 0.8em;
+            color: #888;
+        }
+        .vs {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2em;
+            font-weight: bold;
+            color: #f39c12;
+        }
+        .info-box {
+            margin-top: 20px;
+            padding: 15px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 10px;
+            font-size: 0.9em;
+            color: #888;
+        }
+        .info-box strong {
+            color: #f39c12;
+        }
+    </style>
+</head>
+<body>
+    <div class="lobby">
+        <a href="../index.html" class="back-link">← Back to Mode Select</a>
+        <h1>⚔️ PvP Mode - 3v3</h1>
+        <p class="subtitle">Blue Team vs Red Team — Ultimate Territory War</p>
+
+        <div class="section">
+            <h3>Room ID</h3>
+            <input type="text" id="roomId" placeholder="Enter Room ID">
+            <button class="btn btn-secondary" onclick="generateRoomId()">Generate New Room</button>
+        </div>
+
+        <div class="teams-container">
+            <div class="team blue">
+                <h2>🔵 BLUE TEAM</h2>
+                <div class="roles">
+                    <a href="vanguard.html" class="role-btn" id="blueVanguardLink">
+                        <div class="icon">🏃</div>
+                        <div class="info">
+                            <div class="name">VANGUARD</div>
+                            <div class="desc">Floor Runner • HOST</div>
+                        </div>
+                    </a>
+                    <a href="striker.html" class="role-btn" id="blueStrikerLink">
+                        <div class="icon">🔫</div>
+                        <div class="info">
+                            <div class="name">STRIKER</div>
+                            <div class="desc">FPS Shooter</div>
+                        </div>
+                    </a>
+                    <a href="commander.html" class="role-btn" id="blueCommanderLink">
+                        <div class="icon">👑</div>
+                        <div class="info">
+                            <div class="name">COMMANDER</div>
+                            <div class="desc">Strategy View</div>
+                        </div>
+                    </a>
+                </div>
+            </div>
+
+            <div class="vs">VS</div>
+
+            <div class="team red">
+                <h2>🔴 RED TEAM</h2>
+                <div class="roles">
+                    <a href="vanguard.html" class="role-btn" id="redVanguardLink">
+                        <div class="icon">🏃</div>
+                        <div class="info">
+                            <div class="name">VANGUARD</div>
+                            <div class="desc">Floor Runner</div>
+                        </div>
+                    </a>
+                    <a href="striker.html" class="role-btn" id="redStrikerLink">
+                        <div class="icon">🔫</div>
+                        <div class="info">
+                            <div class="name">STRIKER</div>
+                            <div class="desc">FPS Shooter</div>
+                        </div>
+                    </a>
+                    <a href="commander.html" class="role-btn" id="redCommanderLink">
+                        <div class="icon">👑</div>
+                        <div class="info">
+                            <div class="name">COMMANDER</div>
+                            <div class="desc">Strategy View</div>
+                        </div>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="info-box">
+            <strong>How to Play:</strong><br>
+            1. Generate or share Room ID with all 6 players<br>
+            2. Blue Vanguard must join first (HOST)<br>
+            3. Each player picks their team and role<br>
+            4. Game starts when all 6 players are connected
+        </div>
+    </div>
+
+    <script>
+        function generateRoomId() {
+            const id = 'PVP-' + Math.floor(1000 + Math.random() * 9000).toString();
+            document.getElementById('roomId').value = id;
+            updateLinks();
+        }
+
+        function updateLinks() {
+            const roomId = document.getElementById('roomId').value.trim() || 'pvp-default';
+
+            // Blue team links
+            document.getElementById('blueVanguardLink').href = `vanguard.html?room=${roomId}&team=blue`;
+            document.getElementById('blueStrikerLink').href = `striker.html?room=${roomId}&team=blue`;
+            document.getElementById('blueCommanderLink').href = `commander.html?room=${roomId}&team=blue`;
+
+            // Red team links
+            document.getElementById('redVanguardLink').href = `vanguard.html?room=${roomId}&team=red`;
+            document.getElementById('redStrikerLink').href = `striker.html?room=${roomId}&team=red`;
+            document.getElementById('redCommanderLink').href = `commander.html?room=${roomId}&team=red`;
+        }
+
+        document.getElementById('roomId').addEventListener('input', updateLinks);
+        generateRoomId();
+    </script>
+</body>
+</html>

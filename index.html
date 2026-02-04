@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Co-op Monster Demo - Lobby</title>
+    <title>Fortal Battle Ground</title>
     <style>
         * {
             margin: 0;
@@ -25,169 +25,104 @@
             border-radius: 20px;
             text-align: center;
             backdrop-filter: blur(10px);
-            max-width: 500px;
+            max-width: 600px;
             width: 90%;
         }
         h1 {
             margin-bottom: 10px;
-            font-size: 2em;
+            font-size: 2.5em;
         }
         .subtitle {
             color: #888;
             margin-bottom: 30px;
         }
-        .section {
-            margin: 20px 0;
-        }
-        .section h3 {
-            margin-bottom: 10px;
-            color: #aaa;
-        }
-        input {
-            padding: 12px 20px;
-            font-size: 16px;
-            border: none;
-            border-radius: 10px;
-            width: 100%;
-            margin-bottom: 10px;
-            background: rgba(255,255,255,0.2);
-            color: white;
-        }
-        input::placeholder {
-            color: #888;
-        }
-        .roles {
+        .modes {
             display: flex;
-            gap: 10px;
+            gap: 20px;
             justify-content: center;
             flex-wrap: wrap;
+            margin: 30px 0;
         }
-        .role-btn {
-            padding: 20px;
-            border: 2px solid #444;
-            border-radius: 15px;
+        .mode-btn {
+            padding: 30px;
+            border: 3px solid #444;
+            border-radius: 20px;
             background: rgba(255,255,255,0.05);
             cursor: pointer;
             transition: all 0.3s;
             flex: 1;
-            min-width: 120px;
+            min-width: 200px;
+            max-width: 250px;
             text-decoration: none;
             color: white;
             display: block;
             text-align: center;
         }
-        .role-btn:hover {
-            border-color: #666;
-            background: rgba(255,255,255,0.1);
+        .mode-btn:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
         }
-        .role-btn.selected {
-            border-color: #4CAF50;
-            background: rgba(76,175,80,0.2);
+        .mode-btn.coop {
+            border-color: #3498db;
         }
-        .role-btn .icon {
-            font-size: 2em;
-            margin-bottom: 5px;
+        .mode-btn.coop:hover {
+            background: rgba(52, 152, 219, 0.2);
+            border-color: #5dade2;
         }
-        .role-btn .name {
+        .mode-btn.pvp {
+            border-color: #e74c3c;
+        }
+        .mode-btn.pvp:hover {
+            background: rgba(231, 76, 60, 0.2);
+            border-color: #ec7063;
+        }
+        .mode-btn .icon {
+            font-size: 4em;
+            margin-bottom: 15px;
+        }
+        .mode-btn .name {
+            font-size: 1.5em;
             font-weight: bold;
+            margin-bottom: 10px;
         }
-        .role-btn .desc {
+        .mode-btn .players {
+            font-size: 1.1em;
+            color: #aaa;
+            margin-bottom: 10px;
+        }
+        .mode-btn .desc {
+            font-size: 0.9em;
+            color: #666;
+            line-height: 1.4;
+        }
+        .version {
+            margin-top: 30px;
+            color: #555;
             font-size: 0.8em;
-            color: #888;
-        }
-        .btn {
-            padding: 15px 40px;
-            font-size: 18px;
-            border: none;
-            border-radius: 10px;
-            cursor: pointer;
-            transition: all 0.3s;
-            margin: 5px;
-        }
-        .btn-primary {
-            background: #4CAF50;
-            color: white;
-        }
-        .btn-primary:hover {
-            background: #45a049;
-        }
-        .btn-secondary {
-            background: #2196F3;
-            color: white;
-        }
-        .btn-secondary:hover {
-            background: #1976D2;
-        }
-        .btn:disabled {
-            background: #444;
-            cursor: not-allowed;
-        }
-        #status {
-            margin-top: 20px;
-            padding: 10px;
-            border-radius: 10px;
-            background: rgba(0,0,0,0.3);
-        }
-        .hidden {
-            display: none !important;
         }
     </style>
 </head>
 <body>
     <div class="lobby">
         <h1>⚔️ Fortal Battle Ground ⚔️</h1>
-        <p class="subtitle">3 Players Co-op vs AI — Hyper Battle Mode</p>
+        <p class="subtitle">LED Floor Territory Control Game</p>
 
-        <div class="section">
-            <h3>Room ID</h3>
-            <input type="text" id="roomId" placeholder="Enter Room ID or generate new">
-            <button class="btn btn-secondary" onclick="generateRoomId()">Generate New Room</button>
+        <div class="modes">
+            <a href="coop.html" class="mode-btn coop">
+                <div class="icon">🤝</div>
+                <div class="name">CO-OP MODE</div>
+                <div class="players">3 Players vs AI</div>
+                <div class="desc">Team up with friends<br>Fight against AI enemies<br>Capture territory together</div>
+            </a>
+            <a href="pvp/lobby.html" class="mode-btn pvp">
+                <div class="icon">⚔️</div>
+                <div class="name">PVP MODE</div>
+                <div class="players">3v3 Team Battle</div>
+                <div class="desc">Blue Team vs Red Team<br>6 Players compete<br>Ultimate territory war</div>
+            </a>
         </div>
 
-        <div class="section">
-            <h3>Select Your Role</h3>
-            <div class="roles">
-                <a href="vanguard.html" class="role-btn" id="vanguardLink">
-                    <div class="icon">🏃</div>
-                    <div class="name">VANGUARD</div>
-                    <div class="desc">LED Floor Runner<br><small>Permanent Rage</small></div>
-                </a>
-                <a href="striker.html" class="role-btn" id="strikerLink">
-                    <div class="icon">🔫</div>
-                    <div class="name">STRIKER</div>
-                    <div class="desc">FPS Shooter<br><small>Assault + Railgun</small></div>
-                </a>
-                <a href="commander.html" class="role-btn" id="commanderLink">
-                    <div class="icon">👑</div>
-                    <div class="name">COMMANDER</div>
-                    <div class="desc">Strategy View<br><small>Hero, Turret, Meteor, Boss</small></div>
-                </a>
-            </div>
-        </div>
-
-        <div id="status"></div>
-        <div style="margin-top: 20px; color: #555; font-size: 0.8em;">v2.5.0</div>
+        <div class="version">v2.6.0</div>
     </div>
-
-    <script>
-        function generateRoomId() {
-            // Simple 4-digit room code (1000-9999)
-            const id = Math.floor(1000 + Math.random() * 9000).toString();
-            document.getElementById('roomId').value = id;
-            updateLinks();
-        }
-
-        function updateLinks() {
-            const roomId = document.getElementById('roomId').value.trim() || 'default';
-            document.getElementById('vanguardLink').href = `vanguard.html?room=${roomId}`;
-            document.getElementById('strikerLink').href = `striker.html?room=${roomId}`;
-            document.getElementById('commanderLink').href = `commander.html?room=${roomId}`;
-        }
-
-        document.getElementById('roomId').addEventListener('input', updateLinks);
-
-        // Auto-generate room ID on load
-        generateRoomId();
-    </script>
 </body>
 </html>
