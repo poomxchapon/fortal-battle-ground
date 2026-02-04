@@ -179,6 +179,30 @@
             margin-top: 20px;
         }
         #gameOver .home-btn:hover { background: #2980b9; }
+
+        /* Camera Controls */
+        #cameraControls {
+            position: fixed;
+            bottom: 50px;
+            right: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            z-index: 100;
+        }
+        .cam-btn {
+            padding: 10px 15px;
+            background: rgba(0,0,0,0.7);
+            border: 2px solid #444;
+            border-radius: 8px;
+            color: white;
+            cursor: pointer;
+            font-size: 0.85em;
+            transition: all 0.2s;
+        }
+        .cam-btn:hover { border-color: #9b59b6; background: rgba(155,89,182,0.3); }
+        .cam-btn.active { border-color: #9b59b6; background: rgba(155,89,182,0.5); }
+        .cam-btn .icon { margin-right: 5px; }
     </style>
 </head>
 <body>
@@ -194,7 +218,7 @@
     <!-- HUD -->
     <div id="hud">
         <div class="hud-section">
-            <div class="role-badge">Vanguard <span style="opacity:0.6;font-size:0.7em">v1.8.0</span></div>
+            <div class="role-badge">Vanguard <span style="opacity:0.6;font-size:0.7em">v1.9.0</span></div>
             <div class="stat-box">
                 <div class="stat-label">Room</div>
                 <div class="stat-value" id="roomDisplay">---</div>
@@ -226,6 +250,13 @@
         <p><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> Move</p>
         <p>Run to paint territory!</p>
         <p style="color:#9b59b6;margin-top:10px;">Permanent Rage Active</p>
+    </div>
+
+    <!-- Camera Controls -->
+    <div id="cameraControls">
+        <button class="cam-btn active" onclick="setCameraAngle(0)"><span class="icon">🔽</span>Top</button>
+        <button class="cam-btn" onclick="setCameraAngle(1)"><span class="icon">📐</span>2.5D</button>
+        <button class="cam-btn" onclick="setCameraAngle(2)"><span class="icon">👁️</span>Follow</button>
     </div>
 
     <!-- Territory Bar -->
@@ -511,6 +542,7 @@
 
         // ==================== THREE.JS ====================
         let scene, camera, renderer;
+        let currentCameraAngle = 0; // 0=top, 1=2.5D, 2=follow
         let gridMeshes = [];
         let unitMeshes = {};
         let projectileMeshes = {};
@@ -961,9 +993,55 @@
             playerMesh.position.x = px;
             playerMesh.position.z = pz;
 
-            // Camera follows player slightly
-            camera.position.x = px * 0.3;
-            camera.position.z = pz * 0.3;
+            // Camera behavior based on mode
+            if (currentCameraAngle === 0) {
+                // Top-down: slight follow
+                camera.position.x = px * 0.3;
+                camera.position.z = pz * 0.3;
+            } else if (currentCameraAngle === 1) {
+                // 2.5D: isometric follow
+                camera.position.x = px * 0.5;
+                camera.position.z = pz * 0.5 + 25;
+            } else if (currentCameraAngle === 2) {
+                // Follow: chase camera behind player
+                camera.position.x = px;
+                camera.position.z = pz + 20;
+                camera.lookAt(px, 0, pz - 10);
+            }
+        }
+
+        function setCameraAngle(angle) {
+            currentCameraAngle = angle;
+
+            // Update button states
+            document.querySelectorAll('.cam-btn').forEach((btn, i) => {
+                btn.classList.toggle('active', i === angle);
+            });
+
+            const aspect = window.innerWidth / window.innerHeight;
+            const viewHeight = GAME_CONFIG.GRID_HEIGHT * GAME_CONFIG.CELL_SIZE / 2 + 5;
+            const viewWidth = viewHeight * aspect;
+
+            if (angle === 0) {
+                // Top-down view
+                camera.position.set(0, 50, 0);
+                camera.up.set(0, 0, -1);
+                camera.lookAt(0, 0, 0);
+            } else if (angle === 1) {
+                // 2.5D isometric view
+                camera.position.set(0, 40, 30);
+                camera.up.set(0, 1, 0);
+                camera.lookAt(0, 0, 0);
+            } else if (angle === 2) {
+                // Follow view (behind player)
+                const px = (gameState.players.vanguard.x - GAME_CONFIG.GRID_WIDTH / 2 + 0.5) * GAME_CONFIG.CELL_SIZE;
+                const pz = (gameState.players.vanguard.y - GAME_CONFIG.GRID_HEIGHT / 2 + 0.5) * GAME_CONFIG.CELL_SIZE;
+                camera.position.set(px, 25, pz + 20);
+                camera.up.set(0, 1, 0);
+                camera.lookAt(px, 0, pz - 10);
+            }
+
+            camera.updateProjectionMatrix();
         }
 
         // ==================== INPUT ====================
