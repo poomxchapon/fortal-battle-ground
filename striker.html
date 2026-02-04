@@ -1445,16 +1445,16 @@
                         damage *= 2;
                     }
 
-                    unit.hp -= damage;
+                    // Send damage to host (authoritative)
+                    broadcast({ type: 'shoot', targetId: unitId, damage: damage });
+
                     showHitMarker();
 
+                    // Local feedback for kill (actual kill decided by host)
+                    unit.hp -= damage;
                     if (unit.hp <= 0) {
-                        unit.state = 'dead';
-                        gameState.stats.playerKills++;
                         myKills++;
                         addKillFeed(unit.type);
-
-                        broadcast({ type: 'shoot', targetId: unitId, damage: damage });
                     }
                 }
             }
