@@ -365,6 +365,80 @@ const useSkillBoss = (state) => {
     return true;
 };
 
+// ==================== PVP ENEMY TEAM SKILLS ====================
+const useSkillHeroEnemy = (state, x, y) => {
+    if (state.grid[Math.floor(y)][Math.floor(x)] !== GAME_CONFIG.TEAM_ENEMY) return false;
+    const hero = createUnit('hero', GAME_CONFIG.TEAM_ENEMY, x, y);
+    state.units.enemy.push(hero);
+    return true;
+};
+
+const useSkillTurretEnemy = (state, x, y) => {
+    if (state.grid[Math.floor(y)][Math.floor(x)] !== GAME_CONFIG.TEAM_ENEMY) return false;
+    const turret = createUnit('turret', GAME_CONFIG.TEAM_ENEMY, x, y);
+    state.units.enemy.push(turret);
+    return true;
+};
+
+const useSkillMeteorEnemy = (state, x, y) => {
+    // Kill all player units in 10x10 area
+    const radius = 5;
+    const meteorDamage = 500;
+
+    state.units.player = state.units.player.filter(unit => {
+        const dist = Math.abs(unit.x - x) + Math.abs(unit.y - y);
+        if (dist <= radius) {
+            if (unit.type === 'turret') {
+                unit.hp -= meteorDamage;
+                if (unit.hp <= 0) {
+                    state.stats.enemyKills = (state.stats.enemyKills || 0) + 1;
+                    return false;
+                }
+                return true;
+            }
+            state.stats.enemyKills = (state.stats.enemyKills || 0) + 1;
+            return false;
+        }
+        return true;
+    });
+
+    // Damage player boss if in range
+    if (state.boss.player && state.boss.player.hp > 0) {
+        const bossDist = Math.abs(state.boss.player.x - x) + Math.abs(state.boss.player.y - y);
+        if (bossDist <= radius + 3) {
+            state.boss.player.hp -= meteorDamage;
+            if (state.boss.player.hp <= 0) {
+                state.boss.player.hp = 0;
+                state.boss.player.state = 'dead';
+                state.stats.enemyKills = (state.stats.enemyKills || 0) + 1;
+            }
+        }
+    }
+
+    // Paint area RED
+    for (let dy = -radius; dy <= radius; dy++) {
+        for (let dx = -radius; dx <= radius; dx++) {
+            const gx = Math.floor(x + dx);
+            const gy = Math.floor(y + dy);
+            if (gx >= 0 && gx < GAME_CONFIG.GRID_WIDTH &&
+                gy >= 0 && gy < GAME_CONFIG.GRID_HEIGHT) {
+                if (Math.abs(dx) + Math.abs(dy) <= radius) {
+                    state.grid[gy][gx] = GAME_CONFIG.TEAM_ENEMY;
+                }
+            }
+        }
+    }
+
+    updateTileCount(state);
+    return true;
+};
+
+const useSkillBossEnemy = (state) => {
+    if (state.boss.enemy) return false;
+    spawnBoss(state, GAME_CONFIG.TEAM_ENEMY);
+    return true;
+};
+
 // ==================== GAME UPDATE ====================
 const updateGame = (state, deltaTime) => {
     if (!state.gameStarted || state.gameEnded) return;
@@ -815,6 +889,10 @@ if (typeof module !== 'undefined' && module.exports) {
         useSkillHero,
         useSkillTurret,
         useSkillMeteor,
-        useSkillBoss
+        useSkillBoss,
+        useSkillHeroEnemy,
+        useSkillTurretEnemy,
+        useSkillMeteorEnemy,
+        useSkillBossEnemy
     };
 }
