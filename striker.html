@@ -296,8 +296,8 @@
         <div id="enemyTerritory" style="width:50%;"></div>
     </div>
 
-    <!-- Click to Start -->
-    <div id="clickToStart">
+    <!-- Click to Start (shown after game starts) -->
+    <div id="clickToStart" class="hidden">
         <h1>Click to Start</h1>
         <p>Click anywhere to lock mouse and begin shooting</p>
     </div>
@@ -307,6 +307,103 @@
         <h1 id="resultTitle">VICTORY!</h1>
         <div class="result" id="resultText">Your team wins!</div>
     </div>
+
+    <!-- Waiting Room -->
+    <div id="waitingRoom">
+        <div class="waiting-box">
+            <h1>⚔️ FORTAL BATTLE GROUND ⚔️</h1>
+            <p class="room-code">Room: <span id="waitingRoomId">----</span></p>
+
+            <div class="players-status">
+                <h3>Players</h3>
+                <div class="player-slot" id="slotVanguard">
+                    <span class="dot waiting"></span>
+                    <span class="role-name">🏃 Vanguard (Host)</span>
+                    <span class="status">Waiting...</span>
+                </div>
+                <div class="player-slot ready" id="slotStriker">
+                    <span class="dot ready"></span>
+                    <span class="role-name">🔫 Striker</span>
+                    <span class="status">You</span>
+                </div>
+                <div class="player-slot" id="slotCommander">
+                    <span class="dot waiting"></span>
+                    <span class="role-name">👑 Commander</span>
+                    <span class="status">Waiting...</span>
+                </div>
+            </div>
+
+            <div class="waiting-msg" id="waitingMsg">
+                <span class="spinner"></span>
+                Connecting to host...
+            </div>
+        </div>
+    </div>
+
+    <style>
+        #waitingRoom {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 300;
+        }
+        #waitingRoom.hidden { display: none; }
+        .waiting-box {
+            background: rgba(255,255,255,0.1);
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+            min-width: 320px;
+            max-width: 90%;
+        }
+        .waiting-box h1 { margin-bottom: 10px; font-size: 1.4em; }
+        .room-code { font-size: 1.5em; color: #f39c12; margin-bottom: 30px; }
+        .room-code span { font-weight: bold; font-size: 1.3em; }
+        .players-status { margin: 20px 0; text-align: left; }
+        .players-status h3 { color: #888; margin-bottom: 15px; text-align: center; }
+        .player-slot {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 15px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 10px;
+            margin: 8px 0;
+        }
+        .player-slot .dot {
+            width: 12px; height: 12px;
+            border-radius: 50%;
+            background: #666;
+        }
+        .player-slot .dot.ready { background: #2ecc71; }
+        .player-slot .dot.waiting { background: #666; animation: blink 1.5s infinite; }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+        .player-slot .role-name { flex: 1; font-weight: bold; font-size: 0.95em; }
+        .player-slot .status { color: #888; font-size: 0.85em; }
+        .player-slot.ready .status { color: #2ecc71; }
+        .waiting-msg {
+            margin-top: 25px;
+            padding: 15px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        .spinner {
+            width: 20px; height: 20px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-top-color: #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
 
     <!-- Three.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -354,7 +451,7 @@
         let gameState = createGameState();
         initGrid(gameState);
         gameState.players.striker.connected = true;
-        gameState.gameStarted = true;
+        gameState.gameStarted = false; // Wait for host to start
 
         let myKills = 0;
         let isConnectedToHost = false;
@@ -371,7 +468,8 @@
             peer.on('open', (id) => {
                 console.log('Connected as:', id);
                 document.getElementById('roomDisplay').textContent = ROOM_ID;
-                updateConnectionStatus('Connecting to host...');
+                document.getElementById('waitingRoomId').textContent = ROOM_ID;
+                updateWaitingMsg('Connecting to host...');
 
                 // Connect to vanguard (host)
                 const hostConn = peer.connect(`fbg-${ROOM_ID}-vanguard`);
@@ -383,23 +481,33 @@
             peer.on('error', (err) => {
                 console.error('Peer error:', err);
                 if (err.type === 'peer-unavailable') {
-                    updateConnectionStatus('Host not found! Make sure Vanguard opens first.');
+                    updateWaitingMsg('Host not found! Make sure Vanguard opens first.');
                 } else {
-                    updateConnectionStatus('Connection error: ' + err.type);
+                    updateWaitingMsg('Connection error: ' + err.type);
                 }
             });
         }
 
-        function updateConnectionStatus(msg) {
-            let statusEl = document.getElementById('connectionStatus');
-            if (!statusEl) {
-                statusEl = document.createElement('div');
-                statusEl.id = 'connectionStatus';
-                statusEl.style.cssText = 'position:fixed;bottom:100px;left:20px;background:rgba(0,0,0,0.8);padding:10px 15px;border-radius:10px;color:white;font-size:0.85em;z-index:100;';
-                document.body.appendChild(statusEl);
+        function updateWaitingMsg(msg) {
+            const el = document.getElementById('waitingMsg');
+            if (el) el.innerHTML = `<span class="spinner"></span>${msg}`;
+        }
+
+        function updateWaitingRoom() {
+            const slot = document.getElementById('slotVanguard');
+            if (isConnectedToHost) {
+                slot.classList.add('ready');
+                slot.querySelector('.dot').classList.remove('waiting');
+                slot.querySelector('.dot').classList.add('ready');
+                slot.querySelector('.status').textContent = 'Ready';
+                updateWaitingMsg('Waiting for host to start...');
             }
-            statusEl.textContent = msg;
-            statusEl.style.background = isConnectedToHost ? 'rgba(39,174,96,0.8)' : 'rgba(0,0,0,0.8)';
+        }
+
+        function onGameStart() {
+            gameState.gameStarted = true;
+            document.getElementById('waitingRoom').classList.add('hidden');
+            document.getElementById('clickToStart').classList.remove('hidden');
         }
 
         function handleConnection(conn) {
@@ -409,19 +517,23 @@
             conn.on('open', () => {
                 gameState.players[role].connected = true;
                 if (role === 'vanguard') {
-                    updateConnectionStatus('Connected to Host!');
+                    isConnectedToHost = true;
+                    updateWaitingRoom();
                 }
             });
 
             conn.on('close', () => {
                 if (role === 'vanguard') {
                     isConnectedToHost = false;
-                    updateConnectionStatus('Disconnected from host');
+                    updateWaitingMsg('Disconnected from host');
                 }
             });
 
             conn.on('data', (data) => {
-                if (data.type === 'sync') {
+                if (data.type === 'gameStart') {
+                    onGameStart();
+                }
+                else if (data.type === 'sync') {
                     // Deep copy important arrays to avoid reference issues
                     gameState.grid = JSON.parse(JSON.stringify(data.state.grid));
                     gameState.units = JSON.parse(JSON.stringify(data.state.units));
@@ -431,6 +543,11 @@
                     gameState.gameEnded = data.state.gameEnded;
                     gameState.players.striker.connected = true;
                     isConnectedToHost = true;
+
+                    // Check if game started from sync
+                    if (data.state.gameStarted && !gameState.gameStarted) {
+                        onGameStart();
+                    }
                 }
             });
         }

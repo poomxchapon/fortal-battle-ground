@@ -204,6 +204,106 @@
         <div class="stats" id="resultStats">Tiles painted: 234 | Team kills: 89</div>
     </div>
 
+    <!-- Waiting Room -->
+    <div id="waitingRoom">
+        <div class="waiting-box">
+            <h1>⚔️ FORTAL BATTLE GROUND ⚔️</h1>
+            <p class="room-code">Room: <span id="waitingRoomId">----</span></p>
+
+            <div class="players-status">
+                <h3>Players</h3>
+                <div class="player-slot" id="slotVanguard">
+                    <span class="dot waiting"></span>
+                    <span class="role-name">🏃 Vanguard</span>
+                    <span class="status">Waiting...</span>
+                </div>
+                <div class="player-slot" id="slotStriker">
+                    <span class="dot waiting"></span>
+                    <span class="role-name">🔫 Striker</span>
+                    <span class="status">Waiting...</span>
+                </div>
+                <div class="player-slot" id="slotCommander">
+                    <span class="dot waiting"></span>
+                    <span class="role-name">👑 Commander</span>
+                    <span class="status">Waiting...</span>
+                </div>
+            </div>
+
+            <button id="startGameBtn" class="start-btn" disabled onclick="startGame()">
+                Waiting for players...
+            </button>
+            <p class="host-note">You are the HOST</p>
+        </div>
+    </div>
+
+    <style>
+        #waitingRoom {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 300;
+        }
+        #waitingRoom.hidden { display: none; }
+        .waiting-box {
+            background: rgba(255,255,255,0.1);
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+            min-width: 350px;
+        }
+        .waiting-box h1 { margin-bottom: 10px; font-size: 1.5em; }
+        .room-code { font-size: 1.5em; color: #f39c12; margin-bottom: 30px; }
+        .room-code span { font-weight: bold; font-size: 1.3em; }
+        .players-status { margin: 20px 0; text-align: left; }
+        .players-status h3 { color: #888; margin-bottom: 15px; text-align: center; }
+        .player-slot {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 15px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 10px;
+            margin: 8px 0;
+        }
+        .player-slot .dot {
+            width: 12px; height: 12px;
+            border-radius: 50%;
+            background: #666;
+        }
+        .player-slot .dot.ready { background: #2ecc71; }
+        .player-slot .dot.waiting { background: #666; animation: blink 1.5s infinite; }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+        .player-slot .role-name { flex: 1; font-weight: bold; }
+        .player-slot .status { color: #888; font-size: 0.85em; }
+        .player-slot.ready .status { color: #2ecc71; }
+        .start-btn {
+            margin-top: 25px;
+            padding: 15px 50px;
+            font-size: 1.2em;
+            font-weight: bold;
+            border: none;
+            border-radius: 10px;
+            background: #666;
+            color: white;
+            cursor: not-allowed;
+            transition: all 0.3s;
+            width: 100%;
+        }
+        .start-btn:not(:disabled) {
+            background: linear-gradient(135deg, #2ecc71, #27ae60);
+            cursor: pointer;
+        }
+        .start-btn:not(:disabled):hover {
+            transform: scale(1.02);
+            box-shadow: 0 5px 20px rgba(46,204,113,0.4);
+        }
+        .host-note { margin-top: 15px; color: #9b59b6; font-size: 0.9em; }
+    </style>
+
     <!-- Three.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <!-- PeerJS -->
@@ -221,7 +321,7 @@
         let gameState = createGameState();
         initGrid(gameState);
         gameState.players.vanguard.connected = true;
-        gameState.gameStarted = true;
+        gameState.gameStarted = false; // Wait for host to start
 
         // ==================== NETWORKING ====================
         let peer = null;
@@ -235,6 +335,8 @@
             peer.on('open', (id) => {
                 console.log('Host ready:', id);
                 document.getElementById('roomDisplay').textContent = ROOM_ID;
+                document.getElementById('waitingRoomId').textContent = ROOM_ID;
+                updateWaitingRoom();
             });
 
             peer.on('connection', (conn) => handleConnection(conn));
@@ -251,6 +353,7 @@
             conn.on('open', () => {
                 gameState.players[role].connected = true;
                 updateConnectionUI();
+                updateWaitingRoom();
                 conn.send({ type: 'sync', state: gameState });
             });
 
@@ -258,6 +361,7 @@
             conn.on('close', () => {
                 gameState.players[role].connected = false;
                 updateConnectionUI();
+                updateWaitingRoom();
             });
         }
 
@@ -265,6 +369,60 @@
             Object.values(connections).forEach(conn => {
                 if (conn.open) conn.send(data);
             });
+        }
+
+        // ==================== WAITING ROOM ====================
+        function updateWaitingRoom() {
+            const players = gameState.players;
+
+            // Update slots
+            updateSlot('slotVanguard', players.vanguard.connected, 'You (Host)');
+            updateSlot('slotStriker', players.striker.connected, players.striker.connected ? 'Ready' : 'Waiting...');
+            updateSlot('slotCommander', players.commander.connected, players.commander.connected ? 'Ready' : 'Waiting...');
+
+            // Enable start button if at least host is ready (can play solo or with others)
+            const btn = document.getElementById('startGameBtn');
+            const connectedCount = [players.vanguard, players.striker, players.commander].filter(p => p.connected).length;
+
+            if (connectedCount >= 1) {
+                btn.disabled = false;
+                btn.textContent = `START GAME (${connectedCount}/3 players)`;
+            } else {
+                btn.disabled = true;
+                btn.textContent = 'Waiting for players...';
+            }
+        }
+
+        function updateSlot(slotId, isConnected, statusText) {
+            const slot = document.getElementById(slotId);
+            const dot = slot.querySelector('.dot');
+            const status = slot.querySelector('.status');
+
+            if (isConnected) {
+                slot.classList.add('ready');
+                dot.classList.remove('waiting');
+                dot.classList.add('ready');
+                status.textContent = statusText;
+            } else {
+                slot.classList.remove('ready');
+                dot.classList.add('waiting');
+                dot.classList.remove('ready');
+                status.textContent = statusText;
+            }
+        }
+
+        function startGame() {
+            if (gameState.gameStarted) return;
+
+            gameState.gameStarted = true;
+            document.getElementById('waitingRoom').classList.add('hidden');
+
+            // Broadcast game start to all clients
+            broadcast({ type: 'gameStart' });
+
+            // Initial minion spawn
+            spawnPlayerMinions(gameState);
+            spawnEnemyMinions(gameState);
         }
 
         function handleNetworkMessage(data) {
