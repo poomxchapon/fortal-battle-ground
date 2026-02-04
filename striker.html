@@ -646,6 +646,10 @@
             // Create arena
             createArena();
 
+            // Set initial camera position (player spawn area, facing enemies)
+            camera.position.set(0, 2.5, 25);
+            camera.lookAt(0, 2.5, -30); // Look toward enemy side
+
             animate();
         }
 
@@ -989,8 +993,29 @@
         }
 
         // ==================== INPUT ====================
-        let yaw = 0, pitch = 0;
+        let yaw = Math.PI, pitch = 0; // Start facing enemies (negative Z direction)
         let mouseDown = false;
+
+        // WASD Movement
+        const keys = { w: false, a: false, s: false, d: false };
+        const MOVE_SPEED = 12; // units per second
+        const PLAYER_HEIGHT = 2.5; // camera height (FPS eye level)
+
+        // Striker position (start at player spawn area - positive Z side)
+        const strikerPos = {
+            x: 0, // center of map
+            z: 25 // player's side (positive Z)
+        };
+
+        // Map boundaries (grid is centered at origin)
+        const halfWidth = (GAME_CONFIG.GRID_WIDTH / 2) * GAME_CONFIG.CELL_SIZE;
+        const halfHeight = (GAME_CONFIG.GRID_HEIGHT / 2) * GAME_CONFIG.CELL_SIZE;
+        const MAP_BOUNDS = {
+            minX: -halfWidth + 2,
+            maxX: halfWidth - 2,
+            minZ: -halfHeight + 2,
+            maxZ: halfHeight - 2
+        };
 
         document.addEventListener('click', () => {
             if (!document.pointerLockElement) {
@@ -1014,7 +1039,60 @@
         document.addEventListener('keydown', (e) => {
             if (e.code === 'Digit1') setWeaponMode('assault');
             if (e.code === 'Digit2') setWeaponMode('railgun');
+
+            // WASD
+            if (e.code === 'KeyW') keys.w = true;
+            if (e.code === 'KeyA') keys.a = true;
+            if (e.code === 'KeyS') keys.s = true;
+            if (e.code === 'KeyD') keys.d = true;
         });
+
+        document.addEventListener('keyup', (e) => {
+            if (e.code === 'KeyW') keys.w = false;
+            if (e.code === 'KeyA') keys.a = false;
+            if (e.code === 'KeyS') keys.s = false;
+            if (e.code === 'KeyD') keys.d = false;
+        });
+
+        function handleMovement(deltaTime) {
+            if (!document.pointerLockElement) return;
+
+            // Movement direction based on yaw (camera facing)
+            const forward = { x: Math.sin(yaw), z: Math.cos(yaw) };
+            const right = { x: Math.cos(yaw), z: -Math.sin(yaw) };
+
+            let moveX = 0, moveZ = 0;
+
+            if (keys.w) { moveX += forward.x; moveZ += forward.z; }
+            if (keys.s) { moveX -= forward.x; moveZ -= forward.z; }
+            if (keys.a) { moveX -= right.x; moveZ -= right.z; }
+            if (keys.d) { moveX += right.x; moveZ += right.z; }
+
+            // Normalize diagonal movement
+            const len = Math.sqrt(moveX * moveX + moveZ * moveZ);
+            if (len > 0) {
+                moveX /= len;
+                moveZ /= len;
+            }
+
+            // Apply movement
+            strikerPos.x += moveX * MOVE_SPEED * deltaTime;
+            strikerPos.z += moveZ * MOVE_SPEED * deltaTime;
+
+            // Clamp to map bounds
+            strikerPos.x = Math.max(MAP_BOUNDS.minX, Math.min(MAP_BOUNDS.maxX, strikerPos.x));
+            strikerPos.z = Math.max(MAP_BOUNDS.minZ, Math.min(MAP_BOUNDS.maxZ, strikerPos.z));
+
+            // Update camera position
+            updateCameraPosition();
+        }
+
+        function updateCameraPosition() {
+            camera.position.x = strikerPos.x;
+            camera.position.z = strikerPos.z;
+            camera.position.y = PLAYER_HEIGHT;
+            updateCameraLook();
+        }
 
         function updateCameraLook() {
             const lookX = Math.sin(yaw) * Math.cos(pitch);
@@ -1149,6 +1227,9 @@
 
             const deltaTime = Math.min((currentTime - lastTime) / 1000, 0.1);
             lastTime = currentTime;
+
+            // Handle movement always (even before game start for looking around)
+            handleMovement(deltaTime);
 
             // Only run game logic after game starts
             if (gameState.gameStarted && !gameState.gameEnded) {
