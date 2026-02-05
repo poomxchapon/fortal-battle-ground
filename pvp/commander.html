@@ -908,11 +908,13 @@
                 group.add(leftEye, rightEye);
 
             } else if (unit.type === 'hero') {
-                // Hero: Capsule body + crown
+                // Hero: Capsule body + crown - Color based on team
+                const heroColor = isPlayer ? 0x3498db : 0xe74c3c; // Blue for player, Red for enemy
+                const heroEmissive = isPlayer ? 0x2980b9 : 0xc0392b;
                 const bodyGeo = new THREE.CapsuleGeometry(config.size * 0.35, config.size * 0.6, 6, 12);
                 const bodyMat = new THREE.MeshStandardMaterial({
-                    color: 0xf1c40f,
-                    emissive: 0xf39c12,
+                    color: heroColor,
+                    emissive: heroEmissive,
                     emissiveIntensity: 0.4,
                     metalness: 0.7,
                     roughness: 0.3
@@ -921,7 +923,7 @@
                 body.position.y = config.size * 0.6;
                 group.add(body);
 
-                // Crown spikes
+                // Crown spikes - gold for both teams
                 const crownMat = new THREE.MeshStandardMaterial({ color: 0xf1c40f, metalness: 0.9 });
                 for (let i = -1; i <= 1; i++) {
                     const spikeGeo = new THREE.ConeGeometry(config.size * 0.1, config.size * 0.3, 4);
@@ -987,8 +989,8 @@
                 group.rotation.y = isPlayer ? Math.PI : 0;
 
             } else if (unit.type === 'boss') {
-                // Boss: Large intimidating creature
-                const bossColor = isPlayer ? 0x8e44ad : 0xc0392b;
+                // Boss: Large intimidating creature - Color based on team
+                const bossColor = isPlayer ? 0x3498db : 0xe74c3c; // Blue for player, Red for enemy
                 const bodyMat = new THREE.MeshStandardMaterial({
                     color: bossColor,
                     emissive: bossColor,

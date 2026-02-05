@@ -1081,11 +1081,13 @@
                 group.add(leftPupil, rightPupil);
 
             } else if (unit.type === 'hero') {
-                // Hero: Taller capsule body + crown
+                // Hero: Taller capsule body + crown - Color based on team
+                const heroColor = isPlayer ? 0x3498db : 0xe74c3c; // Blue for player, Red for enemy
+                const heroEmissive = isPlayer ? 0x2980b9 : 0xc0392b;
                 const bodyGeo = new THREE.CapsuleGeometry(config.size * 0.35, config.size * 0.6, 6, 12);
                 const bodyMat = new THREE.MeshStandardMaterial({
-                    color: 0xf1c40f, // Gold
-                    emissive: 0xf39c12,
+                    color: heroColor,
+                    emissive: heroEmissive,
                     emissiveIntensity: 0.4,
                     metalness: 0.7,
                     roughness: 0.3
@@ -1094,7 +1096,7 @@
                 body.position.y = config.size * 0.6;
                 group.add(body);
 
-                // Crown (3 spikes)
+                // Crown (3 spikes) - gold for both teams
                 const crownMat = new THREE.MeshStandardMaterial({ color: 0xf1c40f, metalness: 0.9 });
                 for (let i = -1; i <= 1; i++) {
                     const spikeGeo = new THREE.ConeGeometry(config.size * 0.1, config.size * 0.3, 4);
@@ -1169,8 +1171,8 @@
                 group.rotation.y = isPlayer ? Math.PI : 0;
 
             } else if (unit.type === 'boss') {
-                // Boss: Large intimidating creature
-                const bossColor = isPlayer ? 0x8e44ad : 0xc0392b;
+                // Boss: Large intimidating creature - Color based on team
+                const bossColor = isPlayer ? 0x3498db : 0xe74c3c; // Blue for player, Red for enemy
 
                 // Body (large box with rounded feel)
                 const bodyGeo = new THREE.BoxGeometry(config.size, config.size * 1.2, config.size * 0.8);
@@ -1501,15 +1503,9 @@
             const myVanguard = MY_TEAM === 'blue' ? gameState.players.vanguard : gameState.players.redVanguard;
             const myTeamCode = MY_TEAM === 'blue' ? GAME_CONFIG.TEAM_PLAYER : GAME_CONFIG.TEAM_ENEMY;
 
-            // Movement (red vanguard moves opposite direction visually since they start at top)
-            if (MY_TEAM === 'blue') {
-                if (keys['KeyW'] || keys['ArrowUp']) { myVanguard.y -= speed; moved = true; }
-                if (keys['KeyS'] || keys['ArrowDown']) { myVanguard.y += speed; moved = true; }
-            } else {
-                // Red vanguard: W goes towards enemy (increasing Y)
-                if (keys['KeyW'] || keys['ArrowUp']) { myVanguard.y += speed; moved = true; }
-                if (keys['KeyS'] || keys['ArrowDown']) { myVanguard.y -= speed; moved = true; }
-            }
+            // Movement - same controls for both teams (W=up, S=down on screen)
+            if (keys['KeyW'] || keys['ArrowUp']) { myVanguard.y -= speed; moved = true; }
+            if (keys['KeyS'] || keys['ArrowDown']) { myVanguard.y += speed; moved = true; }
             if (keys['KeyA'] || keys['ArrowLeft']) { myVanguard.x -= speed; moved = true; }
             if (keys['KeyD'] || keys['ArrowRight']) { myVanguard.x += speed; moved = true; }
 

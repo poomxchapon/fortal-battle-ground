@@ -20,8 +20,8 @@ const GAME_CONFIG = {
     COLOR_RED: 0xe74c3c,
 
     // Minion spawn
-    MINION_SPAWN_INTERVAL: 12, // seconds
-    MINIONS_PER_SPAWN: 2,
+    MINION_SPAWN_INTERVAL: 8, // seconds (faster spawn)
+    MINIONS_PER_SPAWN: 4, // more minions per wave
 
     // Skills cooldowns (seconds)
     SKILL_HERO_CD: 15,
