@@ -794,9 +794,15 @@
                     gameState.stats.playerTiles = data.pt;
                     gameState.stats.enemyTiles = data.et;
                     gameState.gameEnded = data.ended;
-                    gameState.players.vanguard.x = data.vx;
-                    gameState.players.vanguard.y = data.vy;
-                    if (data.rvx !== undefined) {
+                    // Only update blue vanguard position from sync if we're not blue
+                    // (blue vanguard is authoritative on host)
+                    if (MY_TEAM !== 'blue') {
+                        gameState.players.vanguard.x = data.vx;
+                        gameState.players.vanguard.y = data.vy;
+                    }
+                    // Only update red vanguard position from sync if we're not red
+                    // (red vanguard controls their own position locally)
+                    if (data.rvx !== undefined && MY_TEAM !== 'red') {
                         gameState.players.redVanguard.x = data.rvx;
                         gameState.players.redVanguard.y = data.rvy;
                     }
