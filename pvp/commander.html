@@ -533,9 +533,18 @@
         let retryCount = 0;
         const MAX_RETRIES = 3;
 
+        // Generate unique suffix to avoid ID collision on refresh
+        const uniqueSuffix = Math.random().toString(36).substr(2, 4);
+
         function initNetworking() {
-            const peerId = `fortal_pvp_${ROOM_ID}_${MY_TEAM}_commander`;
+            // Add unique suffix to avoid "ID is taken" error on refresh
+            const peerId = `fortal_pvp_${ROOM_ID}_${MY_TEAM}_commander_${uniqueSuffix}`;
             console.log('Creating peer with ID:', peerId);
+
+            // Destroy existing peer if any
+            if (peer) {
+                peer.destroy();
+            }
 
             peer = new Peer(peerId, {
                 debug: 1
@@ -561,6 +570,10 @@
                     } else {
                         updateWaitingMsg('❌ Host not found! Make sure Vanguard opens first. <button onclick="location.reload()">Retry</button>');
                     }
+                } else if (err.type === 'unavailable-id') {
+                    // ID taken - reload to get new unique suffix
+                    console.log('ID taken, reloading...');
+                    location.reload();
                 } else {
                     updateWaitingMsg(`⚠️ Error: ${err.type} <button onclick="location.reload()">Retry</button>`);
                 }
