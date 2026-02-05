@@ -851,6 +851,8 @@ const updateBoss = (state, deltaTime) => {
 // ==================== AI CONTROLLER ====================
 let aiTurretTimer = 0;
 let aiHeroTimer = 0;
+let aiBossTimer = 0;
+const AI_BOSS_COOLDOWN = 90; // 90 seconds cooldown for AI boss
 
 const updateAI = (state, deltaTime) => {
     // AI spawns minions periodically (handled by main game loop)
@@ -886,17 +888,26 @@ const updateAI = (state, deltaTime) => {
         state.units.enemy.push(hero);
     }
 
-    // AI might spawn boss when losing badly (reduced chance)
-    if (!state.boss.enemy && state.stats.enemyTiles < state.stats.playerTiles * 0.3) {
-        if (Math.random() < 0.0005) { // Lower chance
-            spawnBoss(state, GAME_CONFIG.TEAM_ENEMY);
-        }
-    }
+    // AI Boss spawning with proper cooldown (NOT random every frame!)
+    aiBossTimer += deltaTime;
 
-    // AI spawns boss when player has boss (counter) - reduced chance
-    if (!state.boss.enemy && state.boss.player) {
-        if (Math.random() < 0.003) {
+    // Only check boss spawn if cooldown is done and no existing boss
+    if (!state.boss.enemy && aiBossTimer >= AI_BOSS_COOLDOWN) {
+        let shouldSpawn = false;
+
+        // Spawn when losing badly (enemy has < 30% of player tiles)
+        if (state.stats.enemyTiles < state.stats.playerTiles * 0.3) {
+            shouldSpawn = true;
+        }
+
+        // Spawn to counter player boss (50% chance when cooldown ready)
+        if (state.boss.player && Math.random() < 0.5) {
+            shouldSpawn = true;
+        }
+
+        if (shouldSpawn) {
             spawnBoss(state, GAME_CONFIG.TEAM_ENEMY);
+            aiBossTimer = 0; // Reset cooldown
         }
     }
 };
