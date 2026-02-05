@@ -1113,7 +1113,7 @@
                 group.add(leftEye, rightEye);
 
             } else if (unit.type === 'turret') {
-                // Turret: Base + rotating top + barrel - Color based on team
+                // Turret: Base + rotating head (top + barrels) - Color based on team
                 const turretColor = isPlayer ? 0x3498db : 0xe74c3c; // Blue for player, Red for enemy
                 const turretEmissive = isPlayer ? 0x2980b9 : 0xc0392b;
                 const baseMat = new THREE.MeshStandardMaterial({
@@ -1123,28 +1123,33 @@
                     metalness: 0.6
                 });
 
-                // Base (cylinder)
+                // Base (cylinder) - stays fixed
                 const baseGeo = new THREE.CylinderGeometry(config.size * 0.5, config.size * 0.6, config.size * 0.4, 8);
                 const base = new THREE.Mesh(baseGeo, baseMat);
                 base.position.y = config.size * 0.2;
                 group.add(base);
 
-                // Top (sphere)
+                // Turret Head group (rotates together) - children[1]
+                const turretHead = new THREE.Group();
+                turretHead.position.y = config.size * 0.6; // Pivot point at top of base
+
+                // Top (sphere) - part of head
                 const topGeo = new THREE.SphereGeometry(config.size * 0.4, 12, 8);
                 const top = new THREE.Mesh(topGeo, baseMat);
-                top.position.y = config.size * 0.6;
-                group.add(top);
+                turretHead.add(top);
 
-                // Barrels (2 cylinders)
+                // Barrels (2 cylinders) - part of head
                 const barrelGeo = new THREE.CylinderGeometry(config.size * 0.08, config.size * 0.08, config.size * 0.6, 6);
                 const barrelMat = new THREE.MeshStandardMaterial({ color: 0x2c3e50, metalness: 0.8 });
                 const barrel1 = new THREE.Mesh(barrelGeo, barrelMat);
                 barrel1.rotation.x = Math.PI / 2;
-                barrel1.position.set(-config.size * 0.15, config.size * 0.6, config.size * 0.5);
+                barrel1.position.set(-config.size * 0.15, 0, config.size * 0.5);
                 const barrel2 = new THREE.Mesh(barrelGeo, barrelMat);
                 barrel2.rotation.x = Math.PI / 2;
-                barrel2.position.set(config.size * 0.15, config.size * 0.6, config.size * 0.5);
-                group.add(barrel1, barrel2);
+                barrel2.position.set(config.size * 0.15, 0, config.size * 0.5);
+                turretHead.add(barrel1, barrel2);
+
+                group.add(turretHead);
 
                 // Range indicator ring - also team colored
                 const ringGeo = new THREE.RingGeometry(GAME_CONFIG.UNITS.turret.area * GAME_CONFIG.CELL_SIZE - 0.1,
