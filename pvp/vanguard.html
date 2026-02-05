@@ -409,7 +409,12 @@
     <!-- PeerJS -->
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <!-- Game Core -->
-    <script src="gameCore.js"></script>
+    <script src="../js/gameCore.js"></script>
+    <script>
+        // Override spawn config for PvP
+        GAME_CONFIG.MINION_SPAWN_INTERVAL = 5;
+        GAME_CONFIG.MINIONS_PER_SPAWN = 5;
+    </script>
 
     <script>
         // ==================== CONFIG ====================
