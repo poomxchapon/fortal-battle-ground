@@ -990,41 +990,46 @@
                     metalness: 0.7
                 });
 
-                // Base platform
+                // Base platform - stays fixed
                 const baseGeo = new THREE.CylinderGeometry(config.size * 0.6, config.size * 0.7, config.size * 0.5, 8);
                 const base = new THREE.Mesh(baseGeo, baseMat);
                 base.position.y = config.size * 0.25;
                 group.add(base);
 
-                // Mid section
+                // Mid section - stays fixed
                 const midGeo = new THREE.CylinderGeometry(config.size * 0.4, config.size * 0.5, config.size * 0.4, 8);
                 const mid = new THREE.Mesh(midGeo, baseMat);
                 mid.position.y = config.size * 0.65;
                 group.add(mid);
 
-                // Dome head
+                // Turret Head group (rotates together) - children[2]
+                const turretHead = new THREE.Group();
+                turretHead.position.y = config.size * 1; // Pivot point
+
+                // Dome head - part of rotating head
                 const domeGeo = new THREE.SphereGeometry(config.size * 0.5, 16, 12);
                 const dome = new THREE.Mesh(domeGeo, baseMat);
-                dome.position.y = config.size * 1;
-                group.add(dome);
+                turretHead.add(dome);
 
-                // Twin barrels
+                // Twin barrels - part of rotating head
                 const barrelGeo = new THREE.CylinderGeometry(config.size * 0.1, config.size * 0.1, config.size * 0.8, 8);
                 const barrelMat = new THREE.MeshStandardMaterial({ color: 0x2c3e50, metalness: 0.9 });
                 const barrel1 = new THREE.Mesh(barrelGeo, barrelMat);
                 barrel1.rotation.x = Math.PI / 2;
-                barrel1.position.set(-config.size * 0.18, config.size * 1, config.size * 0.6);
+                barrel1.position.set(-config.size * 0.18, 0, config.size * 0.6);
                 const barrel2 = new THREE.Mesh(barrelGeo, barrelMat);
                 barrel2.rotation.x = Math.PI / 2;
-                barrel2.position.set(config.size * 0.18, config.size * 1, config.size * 0.6);
-                group.add(barrel1, barrel2);
+                barrel2.position.set(config.size * 0.18, 0, config.size * 0.6);
+                turretHead.add(barrel1, barrel2);
 
-                // Sensor eye - color based on team
+                // Sensor eye - part of rotating head
                 const eyeGeo = new THREE.SphereGeometry(config.size * 0.15, 12, 12);
                 const eyeMat = new THREE.MeshBasicMaterial({ color: isPlayer ? 0x00ff00 : 0xff0000 });
                 const eye = new THREE.Mesh(eyeGeo, eyeMat);
-                eye.position.set(0, config.size * 1.2, config.size * 0.4);
-                group.add(eye);
+                eye.position.set(0, config.size * 0.2, config.size * 0.4);
+                turretHead.add(eye);
+
+                group.add(turretHead);
 
                 // Rotate turret to face enemy (player turrets face negative Z / low Y)
                 group.rotation.y = isPlayer ? Math.PI : 0;
